@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "PlantPal",
+    "slug": "plantpal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.plantpal.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PlantPal to access your photos so you can add a picture of your plant.",
+          "cameraPermission": "Allow PlantPal to use your camera so you can take a picture of your plant."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "78aa969c-3b78-47a0-9b1b-dcd3f58c84e8"
+      }
+    },
+    "owner": "atul15s-team"
+  }
+}
