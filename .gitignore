@@ -30,7 +30,15 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# IDE / tooling
+.idea/
+.claude/
+
+# Firebase config (copy firebase/config.example.js)
+firebase/config.js
+
 # local env files
+.env
 .env*.local
 
 # typescript
