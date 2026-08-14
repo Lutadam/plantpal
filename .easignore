@@ -1,0 +1,48 @@
+# EAS Build uploads the project respecting this file instead of .gitignore.
+# firebase/config.js is deliberately NOT excluded here (unlike .gitignore) —
+# EAS Build needs the real file to bundle the app; it just doesn't get committed to git.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# IDE / tooling
+.idea/
+.claude/
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android

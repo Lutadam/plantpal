@@ -9,9 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { pickImage } from '../utils/pickImage';
 import { savePlantPhoto } from '../utils/photoStorage';
+import { useTheme } from '../utils/theme';
 
 export default function PlantForm({
   initialValues,
@@ -19,6 +20,7 @@ export default function PlantForm({
   savingLabel,
   onSubmit,
 }) {
+  const theme = useTheme();
   const [name, setName] = useState(initialValues?.name || '');
   const [species, setSpecies] = useState(initialValues?.species || '');
   const [wateringIntervalDays, setWateringIntervalDays] = useState(
@@ -29,34 +31,18 @@ export default function PlantForm({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleTakePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setError('Camera permission is required to take a photo.');
+  const handlePickPhoto = async (source) => {
+    const { error, uri } = await pickImage(source);
+    if (error) {
+      setError(
+        source === 'camera'
+          ? 'Camera permission is required to take a photo.'
+          : 'Photo library permission is required to choose a photo.'
+      );
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.6,
-      allowsEditing: true,
-    });
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
-      setPhotoChanged(true);
-    }
-  };
-
-  const handleChooseFromLibrary = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Photo library permission is required to choose a photo.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.6,
-      allowsEditing: true,
-    });
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+    if (uri) {
+      setPhotoUri(uri);
       setPhotoChanged(true);
     }
   };
@@ -98,60 +84,81 @@ export default function PlantForm({
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>
+      ) : null}
 
       <View style={styles.photoRow}>
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photoPreview} />
         ) : (
-          <View style={styles.photoPlaceholder}>
-            <Ionicons name="leaf-outline" size={32} color="#bdbdbd" />
+          <View style={[styles.photoPlaceholder, { backgroundColor: theme.surface }]}>
+            <Ionicons name="leaf-outline" size={32} color={theme.placeholderIcon} />
           </View>
         )}
         <View style={styles.photoButtons}>
-          <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
-            <Ionicons name="camera" size={18} color="#2e7d32" />
-            <Text style={styles.photoButtonText}>Take Photo</Text>
+          <TouchableOpacity
+            style={styles.photoButton}
+            onPress={() => handlePickPhoto('camera')}
+          >
+            <Ionicons name="camera" size={18} color={theme.primary} />
+            <Text style={[styles.photoButtonText, { color: theme.primary }]}>
+              Take Photo
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.photoButton}
-            onPress={handleChooseFromLibrary}
+            onPress={() => handlePickPhoto('library')}
           >
-            <Ionicons name="images" size={18} color="#2e7d32" />
-            <Text style={styles.photoButtonText}>Choose Photo</Text>
+            <Ionicons name="images" size={18} color={theme.primary} />
+            <Text style={[styles.photoButtonText, { color: theme.primary }]}>
+              Choose Photo
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { borderColor: theme.inputBorder, color: theme.text },
+        ]}
         placeholder="Plant name"
+        placeholderTextColor={theme.textMuted}
         value={name}
         onChangeText={setName}
       />
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { borderColor: theme.inputBorder, color: theme.text },
+        ]}
         placeholder="Species (optional)"
+        placeholderTextColor={theme.textMuted}
         value={species}
         onChangeText={setSpecies}
       />
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { borderColor: theme.inputBorder, color: theme.text },
+        ]}
         placeholder="Watering interval (days)"
+        placeholderTextColor={theme.textMuted}
         keyboardType="number-pad"
         value={wateringIntervalDays}
         onChangeText={setWateringIntervalDays}
       />
 
       <TouchableOpacity
-        style={styles.button}
+        style={[styles.button, { backgroundColor: theme.primary }]}
         onPress={handleSubmit}
         disabled={saving}
       >
-        <Text style={styles.buttonText}>
+        <Text style={[styles.buttonText, { color: theme.onPrimary }]}>
           {saving ? savingLabel : submitLabel}
         </Text>
       </TouchableOpacity>
@@ -164,7 +171,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
   },
   photoRow: {
     flexDirection: 'row',
@@ -181,7 +187,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -195,33 +200,28 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   photoButtonText: {
-    color: '#2e7d32',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#2e7d32',
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   error: {
-    color: '#c62828',
     marginBottom: 12,
     textAlign: 'center',
   },

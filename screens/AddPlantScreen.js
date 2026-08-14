@@ -1,29 +1,35 @@
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { addPlant } from '../db/plantsDb';
+import { useTheme } from '../utils/theme';
 import PlantForm from './PlantForm';
 
 export default function AddPlantScreen({ user, onAdded }) {
+  const theme = useTheme();
+
   const handleSubmit = async (values) => {
     await addPlant(user.uid, values);
     onAdded?.();
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Add Plant</Text>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['top']}
+    >
+      <Text style={[styles.title, { color: theme.primary }]}>Add Plant</Text>
       <PlantForm
         submitLabel="Add Plant"
         savingLabel="Adding..."
         onSubmit={handleSubmit}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 28,
@@ -31,6 +37,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     marginBottom: -8,
-    color: '#2e7d32',
   },
 });

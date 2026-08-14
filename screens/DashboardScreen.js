@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   FlatList,
   Image,
@@ -10,46 +11,55 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../firebase/config';
 import { deletePlant, getPlants, waterPlant } from '../db/plantsDb';
-import { getWateringStatus } from '../utils/watering';
+import { getWateringStatus, severityColor } from '../utils/watering';
+import { useTheme } from '../utils/theme';
 import PlantDetailScreen from './PlantDetailScreen';
 
-function PlantCard({ plant, onPress, onWaterNow, onDelete }) {
+function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
   const status = getWateringStatus(plant);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(plant)}>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: theme.card }]}
+      onPress={() => onPress(plant)}
+    >
       {plant.photoUri ? (
         <Image source={{ uri: plant.photoUri }} style={styles.cardPhoto} />
       ) : (
-        <View style={styles.cardIcon}>
-          <Ionicons name="leaf" size={24} color="#2e7d32" />
+        <View style={[styles.cardIcon, { backgroundColor: theme.surfaceAlt }]}>
+          <Ionicons name="leaf" size={24} color={theme.primary} />
         </View>
       )}
       <View style={styles.cardInfo}>
-        <Text style={styles.cardName}>{plant.name}</Text>
+        <Text style={[styles.cardName, { color: theme.text }]}>{plant.name}</Text>
         {plant.species ? (
-          <Text style={styles.cardSpecies}>{plant.species}</Text>
+          <Text style={[styles.cardSpecies, { color: theme.textSecondary }]}>
+            {plant.species}
+          </Text>
         ) : null}
-        <Text style={[styles.cardStatus, { color: status.color }]}>
+        <Text
+          style={[styles.cardStatus, { color: severityColor(theme, status.severity) }]}
+        >
           {status.label}
         </Text>
       </View>
       <View style={styles.cardActions}>
         <TouchableOpacity
-          style={styles.waterButton}
+          style={[styles.waterButton, { backgroundColor: theme.primary }]}
           onPress={() => onWaterNow(plant.id)}
         >
-          <Ionicons name="water" size={20} color="#fff" />
+          <Ionicons name="water" size={20} color={theme.onPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.iconButton}
           onPress={() => onDelete(plant)}
         >
-          <Ionicons name="trash" size={18} color="#c62828" />
+          <Ionicons name="trash" size={18} color={theme.danger} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -57,6 +67,7 @@ function PlantCard({ plant, onPress, onWaterNow, onDelete }) {
 }
 
 export default function DashboardScreen({ user }) {
+  const theme = useTheme();
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlant, setSelectedPlant] = useState(null);
@@ -71,6 +82,22 @@ export default function DashboardScreen({ user }) {
   useEffect(() => {
     loadPlants();
   }, [loadPlants]);
+
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (appState.current === 'background' && nextState === 'active') {
+        loadPlants();
+      }
+      appState.current = nextState;
+    });
+    return () => subscription.remove();
+  }, [loadPlants]);
+
+  const overdueCount = plants.filter(
+    (plant) => getWateringStatus(plant).severity === 'danger'
+  ).length;
 
   const handleWaterNow = async (plantId) => {
     await waterPlant(plantId);
@@ -96,21 +123,36 @@ export default function DashboardScreen({ user }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['top']}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>My Plants</Text>
+        <Text style={[styles.title, { color: theme.text }]}>My Plants</Text>
         <TouchableOpacity onPress={() => signOut(auth)}>
-          <Ionicons name="log-out-outline" size={26} color="#2e7d32" />
+          <Ionicons name="log-out-outline" size={26} color={theme.primary} />
         </TouchableOpacity>
       </View>
 
+      {overdueCount > 0 ? (
+        <View style={[styles.banner, { backgroundColor: theme.dangerBg }]}>
+          <Ionicons name="water" size={18} color={theme.danger} />
+          <Text style={[styles.bannerText, { color: theme.danger }]}>
+            {overdueCount} plant{overdueCount === 1 ? '' : 's'} need
+            {overdueCount === 1 ? 's' : ''} watering
+          </Text>
+        </View>
+      ) : null}
+
       {loading ? (
-        <ActivityIndicator style={styles.loading} size="large" color="#2e7d32" />
+        <ActivityIndicator style={styles.loading} size="large" color={theme.primary} />
       ) : plants.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="leaf-outline" size={48} color="#bdbdbd" />
-          <Text style={styles.emptyText}>No plants yet</Text>
-          <Text style={styles.emptySubtext}>
+          <Ionicons name="leaf-outline" size={48} color={theme.placeholderIcon} />
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            No plants yet
+          </Text>
+          <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>
             Add your first plant from the Add Plant tab
           </Text>
         </View>
@@ -122,6 +164,7 @@ export default function DashboardScreen({ user }) {
           renderItem={({ item }) => (
             <PlantCard
               plant={item}
+              theme={theme}
               onPress={setSelectedPlant}
               onWaterNow={handleWaterNow}
               onDelete={handleDelete}
@@ -144,14 +187,13 @@ export default function DashboardScreen({ user }) {
           />
         ) : null}
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -164,10 +206,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#212121',
   },
   loading: {
     marginTop: 40,
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+  },
+  bannerText: {
+    fontWeight: '600',
+    marginLeft: 8,
   },
   emptyState: {
     flex: 1,
@@ -178,12 +231,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#616161',
     marginTop: 12,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9e9e9e',
     marginTop: 4,
     textAlign: 'center',
   },
@@ -194,7 +245,6 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
@@ -203,7 +253,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#e8f5e9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -220,11 +269,9 @@ const styles = StyleSheet.create({
   cardName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212121',
   },
   cardSpecies: {
     fontSize: 13,
-    color: '#757575',
     marginTop: 2,
   },
   cardStatus: {
@@ -237,7 +284,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   waterButton: {
-    backgroundColor: '#2e7d32',
     width: 36,
     height: 36,
     borderRadius: 18,

@@ -7,13 +7,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   cancelDailyReminder,
   isNotificationsAvailable,
   requestNotificationPermission,
   scheduleDailyReminder,
+  sendTestNotification,
 } from '../utils/notifications';
+import { useTheme } from '../utils/theme';
 
 const TIME_PRESETS = [
   { label: '7:00 AM', hour: 7, minute: 0 },
@@ -27,6 +30,7 @@ function settingsKey(uid) {
 }
 
 export default function SettingsScreen({ user }) {
+  const theme = useTheme();
   const [enabled, setEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState(TIME_PRESETS[0]);
 
@@ -78,6 +82,25 @@ export default function SettingsScreen({ user }) {
     persist({ enabled: value, reminderTime });
   };
 
+  const handleTestNotification = async () => {
+    if (!notificationsAvailable) {
+      Alert.alert(
+        'Not available in Expo Go',
+        'Notifications need a development build on this platform (Expo Go removed support in SDK 53+). Build with EAS to use this feature.'
+      );
+      return;
+    }
+    const sent = await sendTestNotification();
+    if (!sent) {
+      Alert.alert(
+        'Permission needed',
+        'Enable notifications in your device settings to receive a test notification.'
+      );
+      return;
+    }
+    Alert.alert('Test scheduled', 'A test notification will arrive in about 5 seconds.');
+  };
+
   const handleSelectTime = async (preset) => {
     setReminderTime(preset);
     persist({ enabled, reminderTime: preset });
@@ -87,13 +110,18 @@ export default function SettingsScreen({ user }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['top']}
+    >
+      <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
 
-      <View style={styles.row}>
+      <View style={[styles.row, { borderBottomColor: theme.border }]}>
         <View style={styles.rowText}>
-          <Text style={styles.rowLabel}>Watering Reminders</Text>
-          <Text style={styles.rowSubtext}>
+          <Text style={[styles.rowLabel, { color: theme.text }]}>
+            Watering Reminders
+          </Text>
+          <Text style={[styles.rowSubtext, { color: theme.textSecondary }]}>
             {notificationsAvailable
               ? 'Get a daily notification to check on your plants'
               : 'Requires a development build (not supported in Expo Go)'}
@@ -102,23 +130,32 @@ export default function SettingsScreen({ user }) {
         <Switch
           value={enabled}
           onValueChange={handleToggle}
-          trackColor={{ true: '#2e7d32' }}
+          trackColor={{ true: theme.primary }}
         />
       </View>
 
-      <Text style={styles.sectionLabel}>Reminder time</Text>
+      <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+        Reminder time
+      </Text>
       <View style={styles.presetRow}>
         {TIME_PRESETS.map((preset) => {
           const selected = preset.label === reminderTime.label;
           return (
             <TouchableOpacity
               key={preset.label}
-              style={[styles.presetChip, selected && styles.presetChipSelected]}
+              style={[
+                styles.presetChip,
+                {
+                  borderColor: selected ? theme.primary : theme.inputBorder,
+                  backgroundColor: selected ? theme.primary : 'transparent',
+                },
+              ]}
               onPress={() => handleSelectTime(preset)}
             >
               <Text
                 style={[
                   styles.presetText,
+                  { color: selected ? theme.onPrimary : theme.text },
                   selected && styles.presetTextSelected,
                 ]}
               >
@@ -128,20 +165,27 @@ export default function SettingsScreen({ user }) {
           );
         })}
       </View>
-    </View>
+
+      <TouchableOpacity
+        style={[styles.testButton, { borderColor: theme.primary }]}
+        onPress={handleTestNotification}
+      >
+        <Text style={[styles.testButtonText, { color: theme.primary }]}>
+          Send test notification (5s)
+        </Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 24,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#212121',
     marginBottom: 24,
   },
   row: {
@@ -150,7 +194,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
     marginBottom: 20,
   },
   rowText: {
@@ -160,17 +203,14 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212121',
   },
   rowSubtext: {
     fontSize: 13,
-    color: '#757575',
     marginTop: 2,
   },
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#757575',
     marginBottom: 12,
   },
   presetRow: {
@@ -180,21 +220,24 @@ const styles = StyleSheet.create({
   },
   presetChip: {
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  presetChipSelected: {
-    backgroundColor: '#2e7d32',
-    borderColor: '#2e7d32',
-  },
   presetText: {
     fontSize: 14,
-    color: '#212121',
   },
   presetTextSelected: {
-    color: '#fff',
+    fontWeight: '600',
+  },
+  testButton: {
+    marginTop: 28,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  testButtonText: {
     fontWeight: '600',
   },
 });

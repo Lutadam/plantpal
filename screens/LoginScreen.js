@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
@@ -17,8 +18,9 @@ import {
 } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../firebase/config';
+import { useTheme } from '../utils/theme';
 
-function getPasswordStrength(password) {
+function getPasswordStrength(password, theme) {
   let score = 0;
   if (password.length >= 6) score++;
   if (password.length >= 10) score++;
@@ -26,9 +28,9 @@ function getPasswordStrength(password) {
   if (/\d/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { label: 'Weak', color: '#c62828' };
-  if (score <= 3) return { label: 'Medium', color: '#f9a825' };
-  return { label: 'Strong', color: '#2e7d32' };
+  if (score <= 1) return { label: 'Weak', color: theme.danger };
+  if (score <= 3) return { label: 'Medium', color: theme.warning };
+  return { label: 'Strong', color: theme.primary };
 }
 
 function getAuthErrorMessage(code) {
@@ -51,6 +53,7 @@ function getAuthErrorMessage(code) {
 }
 
 export default function LoginScreen() {
+  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -61,7 +64,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const passwordStrength = getPasswordStrength(password);
+  const passwordStrength = getPasswordStrength(password, theme);
   const strengthLevel =
     passwordStrength.label === 'Weak' ? 1 : passwordStrength.label === 'Medium' ? 2 : 3;
 
@@ -127,27 +130,40 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      edges={['top', 'bottom']}
     >
-      <Text style={styles.title}>PlantPal</Text>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+      <Text style={[styles.title, { color: theme.primary }]}>PlantPal</Text>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {info ? <Text style={styles.info}>{info}</Text> : null}
+      {error ? (
+        <Text style={[styles.message, { color: theme.danger }]}>{error}</Text>
+      ) : null}
+      {info ? (
+        <Text style={[styles.message, { color: theme.primary }]}>{info}</Text>
+      ) : null}
 
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { borderColor: theme.inputBorder, color: theme.text },
+        ]}
         placeholder="Email"
+        placeholderTextColor={theme.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <View style={styles.passwordRow}>
+      <View style={[styles.passwordRow, { borderColor: theme.inputBorder }]}>
         <TextInput
-          style={styles.passwordInput}
+          style={[styles.passwordInput, { color: theme.text }]}
           placeholder="Password"
+          placeholderTextColor={theme.textMuted}
           secureTextEntry={!showPassword}
           value={password}
           onChangeText={setPassword}
@@ -159,7 +175,7 @@ export default function LoginScreen() {
           <Ionicons
             name={showPassword ? 'eye-off' : 'eye'}
             size={22}
-            color="#666"
+            color={theme.iconSubtle}
           />
         </TouchableOpacity>
       </View>
@@ -173,7 +189,7 @@ export default function LoginScreen() {
                 styles.strengthBar,
                 {
                   backgroundColor:
-                    i < strengthLevel ? passwordStrength.color : '#e0e0e0',
+                    i < strengthLevel ? passwordStrength.color : theme.border,
                 },
               ]}
             />
@@ -185,10 +201,11 @@ export default function LoginScreen() {
       ) : null}
 
       {isRegistering ? (
-        <View style={styles.passwordRow}>
+        <View style={[styles.passwordRow, { borderColor: theme.inputBorder }]}>
           <TextInput
-            style={styles.passwordInput}
+            style={[styles.passwordInput, { color: theme.text }]}
             placeholder="Confirm Password"
+            placeholderTextColor={theme.textMuted}
             secureTextEntry={!showConfirmPassword}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
@@ -200,7 +217,7 @@ export default function LoginScreen() {
             <Ionicons
               name={showConfirmPassword ? 'eye-off' : 'eye'}
               size={22}
-              color="#666"
+              color={theme.iconSubtle}
             />
           </TouchableOpacity>
         </View>
@@ -211,18 +228,20 @@ export default function LoginScreen() {
           style={styles.forgotButton}
           onPress={handleForgotPassword}
         >
-          <Text style={styles.switchText}>Forgot password?</Text>
+          <Text style={[styles.switchText, { color: theme.primary }]}>
+            Forgot password?
+          </Text>
         </TouchableOpacity>
       ) : null}
 
       <TouchableOpacity
-        style={styles.button}
+        style={[styles.button, { backgroundColor: theme.primary }]}
         onPress={handleSubmit}
         disabled={
           loading || !email || !password || (isRegistering && !confirmPassword)
         }
       >
-        <Text style={styles.buttonText}>
+        <Text style={[styles.buttonText, { color: theme.onPrimary }]}>
           {loading ? 'Please wait...' : isRegistering ? 'Register' : 'Log In'}
         </Text>
       </TouchableOpacity>
@@ -236,13 +255,14 @@ export default function LoginScreen() {
           setIsRegistering((prev) => !prev);
         }}
       >
-        <Text style={styles.switchText}>
+        <Text style={[styles.switchText, { color: theme.primary }]}>
           {isRegistering
             ? 'Already have an account? Log In'
             : "Don't have an account? Register"}
         </Text>
       </TouchableOpacity>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -251,18 +271,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 32,
-    color: '#2e7d32',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -272,7 +289,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -302,14 +318,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   button: {
-    backgroundColor: '#2e7d32',
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -323,16 +337,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   switchText: {
-    color: '#2e7d32',
     fontSize: 14,
   },
-  error: {
-    color: '#c62828',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  info: {
-    color: '#2e7d32',
+  message: {
     marginBottom: 12,
     textAlign: 'center',
   },

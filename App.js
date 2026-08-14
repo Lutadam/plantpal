@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/config';
@@ -8,6 +9,7 @@ import DashboardScreen from './screens/DashboardScreen';
 import AddPlantScreen from './screens/AddPlantScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import BottomNav from './screens/BottomNav';
+import { useTheme } from './utils/theme';
 
 const SCREENS = {
   home: DashboardScreen,
@@ -16,6 +18,7 @@ const SCREENS = {
 };
 
 export default function App() {
+  const theme = useTheme();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
 
@@ -26,9 +29,9 @@ export default function App() {
   const ActiveScreen = SCREENS[activeTab];
 
   return (
-    <>
+    <SafeAreaProvider>
       {user?.emailVerified ? (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
           <View style={{ flex: 1 }}>
             <ActiveScreen user={user} onAdded={() => setActiveTab('home')} />
           </View>
@@ -37,7 +40,7 @@ export default function App() {
       ) : (
         <LoginScreen />
       )}
-      <StatusBar style="auto" />
-    </>
+      <StatusBar style={theme.statusBarStyle} />
+    </SafeAreaProvider>
   );
 }

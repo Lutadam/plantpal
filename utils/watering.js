@@ -2,7 +2,7 @@ export function getWateringStatus(plant) {
   const intervalDays = plant.wateringIntervalDays || 7;
 
   if (!plant.lastWateredAt) {
-    return { label: 'Never watered', color: '#c62828' };
+    return { label: 'Never watered', severity: 'danger' };
   }
 
   const lastWatered = new Date(plant.lastWateredAt);
@@ -14,11 +14,17 @@ export function getWateringStatus(plant) {
   if (daysUntil <= 0) {
     return {
       label: daysUntil === 0 ? 'Water today' : `Overdue ${Math.abs(daysUntil)}d`,
-      color: '#c62828',
+      severity: 'danger',
     };
   }
   if (daysUntil === 1) {
-    return { label: 'Water tomorrow', color: '#f9a825' };
+    return { label: 'Water tomorrow', severity: 'warning' };
   }
-  return { label: `Water in ${daysUntil}d`, color: '#2e7d32' };
+  return { label: `Water in ${daysUntil}d`, severity: 'ok' };
+}
+
+export function severityColor(theme, severity) {
+  if (severity === 'danger') return theme.danger;
+  if (severity === 'warning') return theme.warning;
+  return theme.primary;
 }

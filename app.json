@@ -7,7 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.plantpal.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.plantpal.app",
@@ -33,13 +37,13 @@
           "photosPermission": "Allow PlantPal to access your photos so you can add a picture of your plant.",
           "cameraPermission": "Allow PlantPal to use your camera so you can take a picture of your plant."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
-        "projectId": "78aa969c-3b78-47a0-9b1b-dcd3f58c84e8"
+        "projectId": "ef58df9e-1ca4-4e62-a70f-b1384265a7ab"
       }
-    },
-    "owner": "atul15s-team"
+    }
   }
 }

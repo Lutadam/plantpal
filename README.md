@@ -18,36 +18,15 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
    ```sh
    npm install
    ```
-
 2. Set up Firebase:
 
    - Create a project at [Firebase console](https://console.firebase.google.com/) and enable **Authentication > Email/Password**.
    - Copy `firebase/config.example.js` to `firebase/config.js` and fill in your project's config values (Project settings > General > Your apps).
-
 3. Start the app:
 
    ```sh
    npx expo start
    ```
-
-## Notifications on Android
-
-Since Expo SDK 53, Expo Go no longer supports `expo-notifications` on Android (importing it throws instead of just warning). The Settings screen detects this and disables the reminder toggle with an explanation when running in Expo Go on Android.
-
-To use notifications on Android, build a [development client](https://docs.expo.dev/develop/development-builds/introduction/) instead:
-
-```sh
-npx eas-cli login
-npx eas-cli build --profile development --platform android
-```
-
-Install the resulting APK on your device, then run:
-
-```sh
-npx expo start --dev-client
-```
-
-iOS Expo Go works without a development build (it only logs a warning for the same restriction).
 
 ## Tech stack
 
