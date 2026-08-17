@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -9,30 +10,46 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
-  cancelDailyReminder,
   isNotificationsAvailable,
   requestNotificationPermission,
-  scheduleDailyReminder,
   sendTestNotification,
 } from '../utils/notifications';
-import { useTheme } from '../utils/theme';
-
-const TIME_PRESETS = [
-  { label: '7:00 AM', hour: 7, minute: 0 },
-  { label: '12:00 PM', hour: 12, minute: 0 },
-  { label: '6:00 PM', hour: 18, minute: 0 },
-  { label: '8:00 PM', hour: 20, minute: 0 },
-];
+import {
+  registerWateringBackgroundTask,
+  runWateringCheckNow,
+  unregisterWateringBackgroundTask,
+} from '../utils/wateringReminderTask';
+import {
+  getPreferredNotifyTime,
+  setPreferredNotifyTime,
+} from '../utils/notificationPrefs';
+import { useTheme, typography } from '../utils/theme';
+import { showExpoGoUnavailableAlert, showPermissionNeededAlert } from '../utils/alerts';
+import { storageKey } from '../utils/storageKeys';
 
 function settingsKey(uid) {
-  return `plantpal:settings:${uid}`;
+  return storageKey(`settings:${uid}`);
+}
+
+function timeToDate({ hour, minute }) {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+function formatTime({ hour, minute }) {
+  const period = hour < 12 ? 'AM' : 'PM';
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
 }
 
 export default function SettingsScreen({ user }) {
   const theme = useTheme();
   const [enabled, setEnabled] = useState(false);
-  const [reminderTime, setReminderTime] = useState(TIME_PRESETS[0]);
+  const [preferredTime, setPreferredTimeState] = useState({ hour: 7, minute: 0 });
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -41,10 +58,10 @@ export default function SettingsScreen({ user }) {
         if (raw) {
           const saved = JSON.parse(raw);
           setEnabled(saved.enabled);
-          setReminderTime(saved.reminderTime);
         }
       })
       .catch(() => {});
+    getPreferredNotifyTime().then(setPreferredTimeState);
   }, [user?.uid]);
 
   const persist = useCallback(
@@ -59,41 +76,34 @@ export default function SettingsScreen({ user }) {
 
   const handleToggle = async (value) => {
     if (!notificationsAvailable) {
-      Alert.alert(
-        'Not available in Expo Go',
-        'Notifications need a development build on this platform (Expo Go removed support in SDK 53+). Build with EAS to use this feature.'
-      );
+      showExpoGoUnavailableAlert();
       return;
     }
     if (value) {
       const granted = await requestNotificationPermission();
       if (!granted) {
-        Alert.alert(
-          'Permission needed',
+        showPermissionNeededAlert(
           'Enable notifications in your device settings to get watering reminders.'
         );
         return;
       }
-      await scheduleDailyReminder(reminderTime.hour, reminderTime.minute);
+      await registerWateringBackgroundTask();
+      await runWateringCheckNow();
     } else {
-      await cancelDailyReminder();
+      await unregisterWateringBackgroundTask();
     }
     setEnabled(value);
-    persist({ enabled: value, reminderTime });
+    persist({ enabled: value });
   };
 
   const handleTestNotification = async () => {
     if (!notificationsAvailable) {
-      Alert.alert(
-        'Not available in Expo Go',
-        'Notifications need a development build on this platform (Expo Go removed support in SDK 53+). Build with EAS to use this feature.'
-      );
+      showExpoGoUnavailableAlert();
       return;
     }
     const sent = await sendTestNotification();
     if (!sent) {
-      Alert.alert(
-        'Permission needed',
+      showPermissionNeededAlert(
         'Enable notifications in your device settings to receive a test notification.'
       );
       return;
@@ -101,12 +111,16 @@ export default function SettingsScreen({ user }) {
     Alert.alert('Test scheduled', 'A test notification will arrive in about 5 seconds.');
   };
 
-  const handleSelectTime = async (preset) => {
-    setReminderTime(preset);
-    persist({ enabled, reminderTime: preset });
-    if (enabled) {
-      await scheduleDailyReminder(preset.hour, preset.minute);
-    }
+  const handleTimeChange = (event, selectedDate) => {
+    setPickerOpen(Platform.OS === 'ios');
+    if (!selectedDate) return;
+    const next = { hour: selectedDate.getHours(), minute: selectedDate.getMinutes() };
+    setPreferredTimeState(next);
+    setPreferredNotifyTime(next.hour, next.minute);
+  };
+
+  const handleTimeDismiss = () => {
+    setPickerOpen(false);
   };
 
   return (
@@ -114,63 +128,58 @@ export default function SettingsScreen({ user }) {
       style={[styles.container, { backgroundColor: theme.background }]}
       edges={['top']}
     >
-      <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
+      <Text style={[typography.screenTitle, styles.title, { color: theme.text }]}>Settings</Text>
 
-      <View style={[styles.row, { borderBottomColor: theme.border }]}>
-        <View style={styles.rowText}>
-          <Text style={[styles.rowLabel, { color: theme.text }]}>
-            Watering Reminders
-          </Text>
-          <Text style={[styles.rowSubtext, { color: theme.textSecondary }]}>
-            {notificationsAvailable
-              ? 'Get a daily notification to check on your plants'
-              : 'Requires a development build (not supported in Expo Go)'}
-          </Text>
+      <View style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}>
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={[typography.label, { color: theme.text }]}>
+              Watering Reminders
+            </Text>
+            <Text style={[typography.subtext, styles.rowSubtext, { color: theme.textSecondary }]}>
+              {notificationsAvailable
+                ? 'Get notified when a plant actually needs water, checked periodically in the background'
+                : 'Requires a development build (not supported in Expo Go)'}
+            </Text>
+          </View>
+          <Switch
+            value={enabled}
+            onValueChange={handleToggle}
+            trackColor={{ true: theme.primary }}
+          />
         </View>
-        <Switch
-          value={enabled}
-          onValueChange={handleToggle}
-          trackColor={{ true: theme.primary }}
-        />
-      </View>
 
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
-        Reminder time
-      </Text>
-      <View style={styles.presetRow}>
-        {TIME_PRESETS.map((preset) => {
-          const selected = preset.label === reminderTime.label;
-          return (
-            <TouchableOpacity
-              key={preset.label}
-              style={[
-                styles.presetChip,
-                {
-                  borderColor: selected ? theme.primary : theme.inputBorder,
-                  backgroundColor: selected ? theme.primary : 'transparent',
-                },
-              ]}
-              onPress={() => handleSelectTime(preset)}
-            >
-              <Text
-                style={[
-                  styles.presetText,
-                  { color: selected ? theme.onPrimary : theme.text },
-                  selected && styles.presetTextSelected,
-                ]}
-              >
-                {preset.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+        <TouchableOpacity
+          style={styles.timeRow}
+          onPress={() => setPickerOpen(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[typography.label, { color: theme.text }]}>Reminder time</Text>
+          <View style={[styles.timePill, { backgroundColor: theme.surfaceAlt }]}>
+            <Text style={[typography.label, { color: theme.primary }]}>
+              {formatTime(preferredTime)}
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
+      {pickerOpen && (
+        <DateTimePicker
+          value={timeToDate(preferredTime)}
+          mode="time"
+          is24Hour={false}
+          onValueChange={handleTimeChange}
+          onDismiss={handleTimeDismiss}
+        />
+      )}
 
       <TouchableOpacity
-        style={[styles.testButton, { borderColor: theme.primary }]}
+        style={[styles.testButton, theme.shadow, { backgroundColor: theme.card, borderColor: theme.primary }]}
         onPress={handleTestNotification}
+        activeOpacity={0.7}
       >
-        <Text style={[styles.testButtonText, { color: theme.primary }]}>
+        <Text style={[typography.button, { color: theme.primary }]}>
           Send test notification (5s)
         </Text>
       </TouchableOpacity>
@@ -184,60 +193,45 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
     marginBottom: 24,
+  },
+  card: {
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    marginBottom: 20,
+    paddingVertical: 16,
   },
   rowText: {
     flex: 1,
     marginRight: 12,
   },
-  rowLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   rowSubtext: {
-    fontSize: 13,
     marginTop: 2,
   },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
+  divider: {
+    height: 1,
   },
-  presetRow: {
+  timeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
   },
-  presetChip: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  presetText: {
-    fontSize: 14,
-  },
-  presetTextSelected: {
-    fontWeight: '600',
+  timePill: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
   },
   testButton: {
-    marginTop: 28,
+    marginTop: 8,
     alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
     borderWidth: 1,
-  },
-  testButtonText: {
-    fontWeight: '600',
   },
 });

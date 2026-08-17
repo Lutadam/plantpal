@@ -38,7 +38,10 @@
           "cameraPermission": "Allow PlantPal to use your camera so you can take a picture of your plant."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-task-manager",
+      "expo-background-task",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

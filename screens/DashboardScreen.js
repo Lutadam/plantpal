@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -17,7 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../firebase/config';
 import { deletePlant, getPlants, waterPlant } from '../db/plantsDb';
 import { getWateringStatus, severityColor } from '../utils/watering';
-import { useTheme } from '../utils/theme';
+import { useTheme, typography } from '../utils/theme';
+import { confirmDeletePlant } from '../utils/confirmDelete';
+import { pluralize } from '../utils/pluralize';
 import PlantDetailScreen from './PlantDetailScreen';
 
 function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
@@ -25,8 +26,24 @@ function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: theme.card }]}
+      style={[
+        styles.card,
+        theme.shadow,
+        {
+          backgroundColor: theme.card,
+          borderLeftColor: severityColor(theme, status.severity),
+        },
+        theme.mode === 'dark' && {
+          borderTopWidth: 1,
+          borderRightWidth: 1,
+          borderBottomWidth: 1,
+          borderTopColor: theme.border,
+          borderRightColor: theme.border,
+          borderBottomColor: theme.border,
+        },
+      ]}
       onPress={() => onPress(plant)}
+      activeOpacity={0.7}
     >
       {plant.photoUri ? (
         <Image source={{ uri: plant.photoUri }} style={styles.cardPhoto} />
@@ -36,9 +53,9 @@ function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
         </View>
       )}
       <View style={styles.cardInfo}>
-        <Text style={[styles.cardName, { color: theme.text }]}>{plant.name}</Text>
+        <Text style={[typography.label, { color: theme.text }]}>{plant.name}</Text>
         {plant.species ? (
-          <Text style={[styles.cardSpecies, { color: theme.textSecondary }]}>
+          <Text style={[typography.subtext, styles.cardSpecies, { color: theme.textSecondary }]}>
             {plant.species}
           </Text>
         ) : null}
@@ -50,8 +67,9 @@ function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
       </View>
       <View style={styles.cardActions}>
         <TouchableOpacity
-          style={[styles.waterButton, { backgroundColor: theme.primary }]}
+          style={[styles.waterButton, theme.shadow, { backgroundColor: theme.primary }]}
           onPress={() => onWaterNow(plant.id)}
+          activeOpacity={0.8}
         >
           <Ionicons name="water" size={20} color={theme.onPrimary} />
         </TouchableOpacity>
@@ -105,21 +123,10 @@ export default function DashboardScreen({ user }) {
   };
 
   const handleDelete = (plant) => {
-    Alert.alert(
-      'Delete plant',
-      `Are you sure you want to delete "${plant.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deletePlant(plant.id);
-            loadPlants();
-          },
-        },
-      ]
-    );
+    confirmDeletePlant(plant.name, async () => {
+      await deletePlant(plant.id);
+      loadPlants();
+    });
   };
 
   return (
@@ -128,18 +135,20 @@ export default function DashboardScreen({ user }) {
       edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.text }]}>My Plants</Text>
+        <Text style={[typography.screenTitle, { color: theme.text }]}>My Plants</Text>
         <TouchableOpacity onPress={() => signOut(auth)}>
           <Ionicons name="log-out-outline" size={26} color={theme.primary} />
         </TouchableOpacity>
       </View>
 
       {overdueCount > 0 ? (
-        <View style={[styles.banner, { backgroundColor: theme.dangerBg }]}>
-          <Ionicons name="water" size={18} color={theme.danger} />
-          <Text style={[styles.bannerText, { color: theme.danger }]}>
-            {overdueCount} plant{overdueCount === 1 ? '' : 's'} need
-            {overdueCount === 1 ? 's' : ''} watering
+        <View style={[styles.banner, theme.shadow, { backgroundColor: theme.dangerBg }]}>
+          <View style={[styles.bannerIcon, { backgroundColor: theme.danger }]}>
+            <Ionicons name="water" size={16} color={theme.onPrimary} />
+          </View>
+          <Text style={[typography.label, styles.bannerText, { color: theme.danger }]}>
+            {overdueCount} {pluralize(overdueCount, 'plant')}{' '}
+            {pluralize(overdueCount, 'needs', 'need')} watering
           </Text>
         </View>
       ) : null}
@@ -149,10 +158,10 @@ export default function DashboardScreen({ user }) {
       ) : plants.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="leaf-outline" size={48} color={theme.placeholderIcon} />
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+          <Text style={[typography.sectionTitle, styles.emptyText, { color: theme.textSecondary }]}>
             No plants yet
           </Text>
-          <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>
+          <Text style={[typography.subtext, styles.emptySubtext, { color: theme.textMuted }]}>
             Add your first plant from the Add Plant tab
           </Text>
         </View>
@@ -203,10 +212,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
   loading: {
     marginTop: 40,
   },
@@ -214,13 +219,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 14,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 14,
+  },
+  bannerIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bannerText: {
-    fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 10,
   },
   emptyState: {
     flex: 1,
@@ -229,12 +240,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
     marginTop: 12,
   },
   emptySubtext: {
-    fontSize: 14,
     marginTop: 4,
     textAlign: 'center',
   },
@@ -245,39 +253,35 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 14,
+    borderLeftWidth: 4,
     padding: 14,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   cardPhoto: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 14,
   },
   cardInfo: {
     flex: 1,
   },
-  cardName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   cardSpecies: {
-    fontSize: 13,
     marginTop: 2,
   },
   cardStatus: {
     fontSize: 13,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 5,
   },
   cardActions: {
     flexDirection: 'row',

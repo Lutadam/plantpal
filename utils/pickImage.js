@@ -19,3 +19,14 @@ export async function pickImage(source) {
   }
   return { error: null, uri: result.assets[0].uri };
 }
+
+export async function pickImageWithHandlers(source, { onPermissionDenied, onPicked }) {
+  const { error, uri } = await pickImage(source);
+  if (error) {
+    onPermissionDenied?.();
+    return;
+  }
+  if (uri) {
+    onPicked?.(uri);
+  }
+}

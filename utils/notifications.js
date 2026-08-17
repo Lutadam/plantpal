@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storageKey } from './storageKeys';
 
 const REMINDER_ID = 'daily-watering-reminder';
+const LAST_ALERT_KEY = storageKey('lastWateringAlert');
 
 // We deliberately deep-import from expo-notifications' individual files instead
 // of the package's main entry point. The main entry point re-exports
@@ -81,27 +84,53 @@ export async function requestNotificationPermission() {
   return request.granted;
 }
 
-export async function scheduleDailyReminder(hour, minute) {
+function wateringAlertBody(duePlants) {
+  const names = duePlants.map((p) => p.name);
+  if (names.length <= 3) {
+    return `Time to water: ${names.join(', ')}.`;
+  }
+  const shown = names.slice(0, 3);
+  return `Time to water: ${shown.join(', ')} and ${names.length - shown.length} more.`;
+}
+
+// Fires a notification naming the plants that are actually due, but only once
+// per distinct due-set (so a periodic background check doesn't re-notify every
+// time it runs while the same plants remain overdue).
+export async function scheduleWateringAlert(duePlants) {
   if (!Notifications) return;
+
+  if (duePlants.length === 0) {
+    await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
+    await AsyncStorage.removeItem(LAST_ALERT_KEY);
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const ids = duePlants
+    .map((p) => p.id)
+    .sort((a, b) => a - b)
+    .join(',');
+  const signature = `${today}:${ids}`;
+  const lastSignature = await AsyncStorage.getItem(LAST_ALERT_KEY);
+  if (signature === lastSignature) return;
+
   await ensureAndroidChannel();
   await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
   await Notifications.scheduleNotificationAsync({
     identifier: REMINDER_ID,
     content: {
       title: 'PlantPal',
-      body: 'Time to check on your plants and water them if needed.',
+      body: wateringAlertBody(duePlants),
     },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
+    trigger: null,
   });
+  await AsyncStorage.setItem(LAST_ALERT_KEY, signature);
 }
 
-export async function cancelDailyReminder() {
+export async function cancelWateringAlert() {
   if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
+  await AsyncStorage.removeItem(LAST_ALERT_KEY);
 }
 
 export async function sendTestNotification() {

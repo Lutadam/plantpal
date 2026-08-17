@@ -20,6 +20,13 @@ const light = {
   dangerBg: '#fdecea',
   warning: '#f9a825',
   statusBarStyle: 'dark',
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
 };
 
 const dark = {
@@ -42,9 +49,52 @@ const dark = {
   dangerBg: '#3b1f1f',
   warning: '#ffb74d',
   statusBarStyle: 'light',
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 3,
+  },
 };
 
 export function useTheme() {
   const scheme = useColorScheme();
   return scheme === 'dark' ? dark : light;
 }
+
+// Shared type scale so every screen's title/label/body text matches in size
+// and weight. Color is applied separately via theme tokens (theme.text,
+// theme.textSecondary, ...) since that stays semantic (e.g. errors in
+// theme.danger), not part of the type scale itself.
+export const typography = {
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  body: {
+    fontSize: 15,
+    fontWeight: '400',
+  },
+  subtext: {
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  button: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+};

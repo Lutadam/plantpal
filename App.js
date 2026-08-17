@@ -10,12 +10,18 @@ import AddPlantScreen from './screens/AddPlantScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import BottomNav from './screens/BottomNav';
 import { useTheme } from './utils/theme';
+import { setCurrentUserId } from './utils/currentUser';
+import { TABS } from './utils/tabs';
 
-const SCREENS = {
+const SCREEN_COMPONENTS = {
   home: DashboardScreen,
   addPlant: AddPlantScreen,
   settings: SettingsScreen,
 };
+
+const SCREENS = Object.fromEntries(
+  TABS.map((tab) => [tab.key, SCREEN_COMPONENTS[tab.key]])
+);
 
 export default function App() {
   const theme = useTheme();
@@ -23,7 +29,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
-    return onAuthStateChanged(auth, setUser);
+    return onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setCurrentUserId(nextUser?.emailVerified ? nextUser.uid : null);
+    });
   }, []);
 
   const ActiveScreen = SCREENS[activeTab];

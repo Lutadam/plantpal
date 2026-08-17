@@ -1,5 +1,7 @@
+export const DEFAULT_WATERING_INTERVAL_DAYS = 7;
+
 export function getWateringStatus(plant) {
-  const intervalDays = plant.wateringIntervalDays || 7;
+  const intervalDays = plant.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS;
 
   if (!plant.lastWateredAt) {
     return { label: 'Never watered', severity: 'danger' };
@@ -21,6 +23,10 @@ export function getWateringStatus(plant) {
     return { label: 'Water tomorrow', severity: 'warning' };
   }
   return { label: `Water in ${daysUntil}d`, severity: 'ok' };
+}
+
+export function isDue(plant) {
+  return getWateringStatus(plant).severity === 'danger';
 }
 
 export function severityColor(theme, severity) {

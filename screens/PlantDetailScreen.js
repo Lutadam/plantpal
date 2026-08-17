@@ -18,10 +18,16 @@ import {
   updatePlant,
   waterPlant,
 } from '../db/plantsDb';
-import { pickImage } from '../utils/pickImage';
+import { pickImageWithHandlers } from '../utils/pickImage';
 import { savePlantPhoto } from '../utils/photoStorage';
-import { getWateringStatus, severityColor } from '../utils/watering';
-import { useTheme } from '../utils/theme';
+import {
+  DEFAULT_WATERING_INTERVAL_DAYS,
+  getWateringStatus,
+  severityColor,
+} from '../utils/watering';
+import { useTheme, typography } from '../utils/theme';
+import { confirmDeletePlant } from '../utils/confirmDelete';
+import { pluralize } from '../utils/pluralize';
 import PlantForm from './PlantForm';
 
 export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted }) {
@@ -40,6 +46,8 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
   }, [loadPhotos]);
 
   const status = getWateringStatus(currentPlant);
+  const wateringIntervalDays =
+    currentPlant.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS;
 
   const handleWaterNow = async () => {
     await waterPlant(currentPlant.id);
@@ -58,36 +66,23 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete plant',
-      `Are you sure you want to delete "${currentPlant.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deletePlant(currentPlant.id);
-            onDeleted?.();
-            onClose?.();
-          },
-        },
-      ]
-    );
+    confirmDeletePlant(currentPlant.name, async () => {
+      await deletePlant(currentPlant.id);
+      onDeleted?.();
+      onClose?.();
+    });
   };
 
-  const addProgressPhoto = async (source) => {
-    const { error, uri } = await pickImage(source);
-    if (error) {
-      Alert.alert('Permission required', 'Please allow access to continue.');
-      return;
-    }
-    if (uri) {
-      const savedUri = savePlantPhoto(uri);
-      await addPlantPhoto(currentPlant.id, savedUri);
-      loadPhotos();
-    }
-  };
+  const addProgressPhoto = (source) =>
+    pickImageWithHandlers(source, {
+      onPermissionDenied: () =>
+        Alert.alert('Permission required', 'Please allow access to continue.'),
+      onPicked: async (uri) => {
+        const savedUri = savePlantPhoto(uri);
+        await addPlantPhoto(currentPlant.id, savedUri);
+        loadPhotos();
+      },
+    });
 
   const handleAddPhoto = () => {
     Alert.alert('Add Progress Photo', undefined, [
@@ -111,7 +106,7 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
           />
         </TouchableOpacity>
         <Text
-          style={[styles.headerTitle, { color: theme.text }]}
+          style={[typography.navTitle, styles.headerTitle, { color: theme.text }]}
           numberOfLines={1}
         >
           {mode === 'edit' ? 'Edit Plant' : currentPlant.name}
@@ -148,7 +143,7 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
           )}
 
           {currentPlant.species ? (
-            <Text style={[styles.species, { color: theme.textSecondary }]}>
+            <Text style={[typography.body, styles.species, { color: theme.textSecondary }]}>
               {currentPlant.species}
             </Text>
           ) : null}
@@ -167,19 +162,18 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
               onPress={handleWaterNow}
             >
               <Ionicons name="water" size={18} color={theme.onPrimary} />
-              <Text style={[styles.waterButtonText, { color: theme.onPrimary }]}>
+              <Text style={[typography.button, styles.waterButtonText, { color: theme.onPrimary }]}>
                 Water Now
               </Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.detailText, { color: theme.textSecondary }]}>
-            Watering every {currentPlant.wateringIntervalDays || 7} day
-            {(currentPlant.wateringIntervalDays || 7) === 1 ? '' : 's'}
+          <Text style={[typography.subtext, styles.detailText, { color: theme.textSecondary }]}>
+            Watering every {wateringIntervalDays} {pluralize(wateringIntervalDays, 'day')}
           </Text>
 
           <View style={styles.timelineHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            <Text style={[typography.sectionTitle, { color: theme.text }]}>
               Growth Photos
             </Text>
             <TouchableOpacity onPress={handleAddPhoto}>
@@ -188,7 +182,7 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
           </View>
 
           {photos.length === 0 ? (
-            <Text style={[styles.emptyPhotos, { color: theme.textMuted }]}>
+            <Text style={[typography.subtext, styles.emptyPhotos, { color: theme.textMuted }]}>
               No progress photos yet. Tap + to add one.
             </Text>
           ) : (
@@ -231,8 +225,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
     marginHorizontal: 12,
     textAlign: 'center',
   },
@@ -261,7 +253,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   species: {
-    fontSize: 15,
     marginBottom: 8,
   },
   statusRow: {
@@ -282,11 +273,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   waterButtonText: {
-    fontWeight: '600',
     marginLeft: 6,
   },
   detailText: {
-    fontSize: 14,
     marginBottom: 24,
   },
   timelineHeader: {
@@ -295,12 +284,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
   emptyPhotos: {
-    fontSize: 14,
     textAlign: 'center',
     marginTop: 16,
   },
