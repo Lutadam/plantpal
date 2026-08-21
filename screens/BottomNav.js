@@ -1,15 +1,15 @@
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../utils/theme';
-import { TABS } from '../utils/tabs';
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../utils/theme";
+import { TABS } from "../utils/tabs";
 
 export default function BottomNav({ active, onChange }) {
   const theme = useTheme();
 
   return (
     <SafeAreaView
-      edges={['bottom']}
+      edges={["bottom"]}
       style={[
         styles.container,
         theme.shadow,
@@ -50,19 +50,19 @@ export default function BottomNav({ active, onChange }) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderTopWidth: 1,
   },
   button: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 8,
   },
   iconWrap: {
     width: 48,
     height: 40,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

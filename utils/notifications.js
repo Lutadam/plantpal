@@ -1,9 +1,9 @@
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { storageKey } from './storageKeys';
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { storageKey } from "./storageKeys";
 
-const REMINDER_ID = 'daily-watering-reminder';
-const LAST_ALERT_KEY = storageKey('lastWateringAlert');
+const REMINDER_ID = "daily-watering-reminder";
+const LAST_ALERT_KEY = storageKey("lastWateringAlert");
 
 // We deliberately deep-import from expo-notifications' individual files instead
 // of the package's main entry point. The main entry point re-exports
@@ -15,26 +15,28 @@ const LAST_ALERT_KEY = storageKey('lastWateringAlert');
 // API), so a future version bump could move these files and silently break this.
 let Notifications = null;
 try {
-  const { setNotificationHandler } = require('expo-notifications/build/NotificationsHandler');
+  const {
+    setNotificationHandler,
+  } = require("expo-notifications/build/NotificationsHandler");
   const {
     getPermissionsAsync,
     requestPermissionsAsync,
-  } = require('expo-notifications/build/NotificationPermissions');
+  } = require("expo-notifications/build/NotificationPermissions");
   const {
     setNotificationChannelAsync,
-  } = require('expo-notifications/build/setNotificationChannelAsync');
+  } = require("expo-notifications/build/setNotificationChannelAsync");
   const {
     scheduleNotificationAsync,
-  } = require('expo-notifications/build/scheduleNotificationAsync');
+  } = require("expo-notifications/build/scheduleNotificationAsync");
   const {
     cancelScheduledNotificationAsync,
-  } = require('expo-notifications/build/cancelScheduledNotificationAsync');
+  } = require("expo-notifications/build/cancelScheduledNotificationAsync");
   const {
     SchedulableTriggerInputTypes,
-  } = require('expo-notifications/build/Notifications.types');
+  } = require("expo-notifications/build/Notifications.types");
   const {
     AndroidImportance,
-  } = require('expo-notifications/build/NotificationChannelManager.types');
+  } = require("expo-notifications/build/NotificationChannelManager.types");
 
   setNotificationHandler({
     handleNotification: async () => ({
@@ -63,10 +65,10 @@ export function isNotificationsAvailable() {
 }
 
 export async function ensureAndroidChannel() {
-  if (!Notifications || Platform.OS !== 'android') return;
+  if (!Notifications || Platform.OS !== "android") return;
   try {
-    await Notifications.setNotificationChannelAsync('watering-reminders', {
-      name: 'Watering reminders',
+    await Notifications.setNotificationChannelAsync("watering-reminders", {
+      name: "Watering reminders",
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   } catch {
@@ -87,10 +89,10 @@ export async function requestNotificationPermission() {
 function wateringAlertBody(duePlants) {
   const names = duePlants.map((p) => p.name);
   if (names.length <= 3) {
-    return `Time to water: ${names.join(', ')}.`;
+    return `Time to water: ${names.join(", ")}.`;
   }
   const shown = names.slice(0, 3);
-  return `Time to water: ${shown.join(', ')} and ${names.length - shown.length} more.`;
+  return `Time to water: ${shown.join(", ")} and ${names.length - shown.length} more.`;
 }
 
 // Fires a notification naming the plants that are actually due, but only once
@@ -100,7 +102,9 @@ export async function scheduleWateringAlert(duePlants) {
   if (!Notifications) return;
 
   if (duePlants.length === 0) {
-    await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
+    await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(
+      () => {},
+    );
     await AsyncStorage.removeItem(LAST_ALERT_KEY);
     return;
   }
@@ -108,18 +112,20 @@ export async function scheduleWateringAlert(duePlants) {
   const today = new Date().toISOString().slice(0, 10);
   const ids = duePlants
     .map((p) => p.id)
-    .sort((a, b) => a - b)
-    .join(',');
+    .sort()
+    .join(",");
   const signature = `${today}:${ids}`;
   const lastSignature = await AsyncStorage.getItem(LAST_ALERT_KEY);
   if (signature === lastSignature) return;
 
   await ensureAndroidChannel();
-  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(
+    () => {},
+  );
   await Notifications.scheduleNotificationAsync({
     identifier: REMINDER_ID,
     content: {
-      title: 'PlantPal',
+      title: "PlantPal",
       body: wateringAlertBody(duePlants),
     },
     trigger: null,
@@ -129,7 +135,9 @@ export async function scheduleWateringAlert(duePlants) {
 
 export async function cancelWateringAlert() {
   if (!Notifications) return;
-  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(
+    () => {},
+  );
   await AsyncStorage.removeItem(LAST_ALERT_KEY);
 }
 
@@ -140,8 +148,8 @@ export async function sendTestNotification() {
   await ensureAndroidChannel();
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'PlantPal test',
-      body: 'If you see this, notifications are working.',
+      title: "PlantPal test",
+      body: "If you see this, notifications are working.",
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

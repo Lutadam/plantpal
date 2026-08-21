@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -8,115 +8,187 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import {
   addPlantPhoto,
   deletePlant,
   getPlantPhotos,
+  snoozePlant,
   updatePlant,
   waterPlant,
-} from '../db/plantsDb';
-import { pickImageWithHandlers } from '../utils/pickImage';
-import { savePlantPhoto } from '../utils/photoStorage';
+} from "../db/plantsDb";
+import { pickImageWithHandlers } from "../utils/pickImage";
+import {
+  deletePlantPhotoFiles,
+  uploadPlantPhoto,
+  useSignedPhotoUrls,
+} from "../utils/supabaseStorage";
 import {
   DEFAULT_WATERING_INTERVAL_DAYS,
   getWateringStatus,
   severityColor,
-} from '../utils/watering';
-import { useTheme, typography } from '../utils/theme';
-import { confirmDeletePlant } from '../utils/confirmDelete';
-import { pluralize } from '../utils/pluralize';
-import PlantForm from './PlantForm';
+} from "../utils/watering";
+import { useTheme, typography } from "../utils/theme";
+import { confirmDeletePlant } from "../utils/confirmDelete";
+import { showGenericErrorAlert } from "../utils/alerts";
+import { getSnoozeDays } from "../utils/notificationPrefs";
+import { pluralize } from "../utils/pluralize";
+import PlantForm from "./PlantForm";
 
-export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted }) {
+export default function PlantDetailScreen({
+  user,
+  plant,
+  onClose,
+  onChanged,
+  onDeleted,
+}) {
   const theme = useTheme();
   const [currentPlant, setCurrentPlant] = useState(plant);
   const [photos, setPhotos] = useState([]);
-  const [mode, setMode] = useState('view');
+  const [mode, setMode] = useState("view");
 
   const loadPhotos = useCallback(async () => {
-    const rows = await getPlantPhotos(plant.id);
-    setPhotos(rows);
+    try {
+      const rows = await getPlantPhotos(plant.id);
+      setPhotos(rows);
+    } catch (err) {
+      showGenericErrorAlert();
+    }
   }, [plant.id]);
 
   useEffect(() => {
     loadPhotos();
   }, [loadPhotos]);
 
+  const photoUrlMap = useSignedPhotoUrls([
+    currentPlant.photoUri,
+    ...photos.map((photo) => photo.photoUri),
+  ]);
+
   const status = getWateringStatus(currentPlant);
   const wateringIntervalDays =
     currentPlant.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS;
 
   const handleWaterNow = async () => {
-    await waterPlant(currentPlant.id);
-    setCurrentPlant((prev) => ({
-      ...prev,
-      lastWateredAt: new Date().toISOString(),
-    }));
-    onChanged?.();
+    try {
+      await waterPlant(currentPlant.id);
+      setCurrentPlant((prev) => ({
+        ...prev,
+        lastWateredAt: new Date().toISOString(),
+      }));
+      onChanged?.();
+    } catch (err) {
+      showGenericErrorAlert();
+    }
   };
 
-  const handleEditSubmit = async (values) => {
-    await updatePlant(currentPlant.id, values);
-    setCurrentPlant((prev) => ({ ...prev, ...values }));
-    setMode('view');
+  const handleSnooze = async () => {
+    try {
+      const days = await getSnoozeDays();
+      const snoozedUntil = await snoozePlant(currentPlant.id, days);
+      setCurrentPlant((prev) => ({ ...prev, snoozedUntil }));
+      onChanged?.();
+    } catch (err) {
+      showGenericErrorAlert();
+    }
+  };
+
+  const handleEditSubmit = async ({ photoChanged, photoUri, ...values }) => {
+    const uploadedPath =
+      photoChanged && photoUri
+        ? await uploadPlantPhoto(user.uid, photoUri)
+        : photoUri;
+    const nextValues = { ...values, photoUri: uploadedPath };
+    await updatePlant(currentPlant.id, nextValues);
+    setCurrentPlant((prev) => ({ ...prev, ...nextValues }));
+    setMode("view");
     onChanged?.();
   };
 
   const handleDelete = () => {
     confirmDeletePlant(currentPlant.name, async () => {
-      await deletePlant(currentPlant.id);
-      onDeleted?.();
-      onClose?.();
+      try {
+        const photoPaths = [
+          currentPlant.photoUri,
+          ...photos.map((p) => p.photoUri),
+        ];
+        await Promise.all([
+          deletePlant(currentPlant.id),
+          deletePlantPhotoFiles(photoPaths),
+        ]);
+        onDeleted?.();
+        onClose?.();
+      } catch (err) {
+        showGenericErrorAlert();
+      }
     });
   };
 
   const addProgressPhoto = (source) =>
     pickImageWithHandlers(source, {
       onPermissionDenied: () =>
-        Alert.alert('Permission required', 'Please allow access to continue.'),
+        Alert.alert("Permission required", "Please allow access to continue."),
       onPicked: async (uri) => {
-        const savedUri = savePlantPhoto(uri);
-        await addPlantPhoto(currentPlant.id, savedUri);
-        loadPhotos();
+        try {
+          const uploadedPath = await uploadPlantPhoto(user.uid, uri);
+          await addPlantPhoto(currentPlant.id, uploadedPath);
+          loadPhotos();
+        } catch (err) {
+          showGenericErrorAlert();
+        }
       },
     });
 
   const handleAddPhoto = () => {
-    Alert.alert('Add Progress Photo', undefined, [
-      { text: 'Take Photo', onPress: () => addProgressPhoto('camera') },
-      { text: 'Choose from Library', onPress: () => addProgressPhoto('library') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Add Progress Photo", undefined, [
+      { text: "Take Photo", onPress: () => addProgressPhoto("camera") },
+      {
+        text: "Choose from Library",
+        onPress: () => addProgressPhoto("library"),
+      },
+      { text: "Cancel", style: "cancel" },
     ]);
   };
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
-      edges={['top', 'bottom']}
+      edges={["top", "bottom"]}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={mode === 'edit' ? () => setMode('view') : onClose}>
+        <TouchableOpacity
+          onPress={mode === "edit" ? () => setMode("view") : onClose}
+        >
           <Ionicons
-            name={mode === 'edit' ? 'arrow-back' : 'close'}
+            name={mode === "edit" ? "arrow-back" : "close"}
             size={26}
             color={theme.iconMuted}
           />
         </TouchableOpacity>
         <Text
-          style={[typography.navTitle, styles.headerTitle, { color: theme.text }]}
+          style={[
+            typography.navTitle,
+            styles.headerTitle,
+            { color: theme.text },
+          ]}
           numberOfLines={1}
         >
-          {mode === 'edit' ? 'Edit Plant' : currentPlant.name}
+          {mode === "edit" ? "Edit Plant" : currentPlant.name}
         </Text>
-        {mode === 'view' ? (
+        {mode === "view" ? (
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => setMode('edit')} style={styles.headerButton}>
+            <TouchableOpacity
+              onPress={() => setMode("edit")}
+              style={styles.headerButton}
+            >
               <Ionicons name="pencil" size={22} color={theme.iconMuted} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} style={styles.headerButton}>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={styles.headerButton}
+            >
               <Ionicons name="trash" size={22} color={theme.danger} />
             </TouchableOpacity>
           </View>
@@ -125,25 +197,44 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
         )}
       </View>
 
-      {mode === 'edit' ? (
+      {mode === "edit" ? (
         <PlantForm
           initialValues={currentPlant}
+          existingPhotoDisplayUrl={photoUrlMap[currentPlant.photoUri]}
           submitLabel="Save Changes"
           savingLabel="Saving..."
           onSubmit={handleEditSubmit}
         />
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
-          {currentPlant.photoUri ? (
-            <Image source={{ uri: currentPlant.photoUri }} style={styles.hero} />
+          {photoUrlMap[currentPlant.photoUri] ? (
+            <Image
+              source={{ uri: photoUrlMap[currentPlant.photoUri] }}
+              style={styles.hero}
+            />
           ) : (
-            <View style={[styles.heroPlaceholder, { backgroundColor: theme.surface }]}>
-              <Ionicons name="leaf-outline" size={48} color={theme.placeholderIcon} />
+            <View
+              style={[
+                styles.heroPlaceholder,
+                { backgroundColor: theme.surface },
+              ]}
+            >
+              <Ionicons
+                name="leaf-outline"
+                size={48}
+                color={theme.placeholderIcon}
+              />
             </View>
           )}
 
           {currentPlant.species ? (
-            <Text style={[typography.body, styles.species, { color: theme.textSecondary }]}>
+            <Text
+              style={[
+                typography.body,
+                styles.species,
+                { color: theme.textSecondary },
+              ]}
+            >
               {currentPlant.species}
             </Text>
           ) : null}
@@ -157,19 +248,58 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
             >
               {status.label}
             </Text>
-            <TouchableOpacity
-              style={[styles.waterButton, { backgroundColor: theme.primary }]}
-              onPress={handleWaterNow}
-            >
-              <Ionicons name="water" size={18} color={theme.onPrimary} />
-              <Text style={[typography.button, styles.waterButtonText, { color: theme.onPrimary }]}>
-                Water Now
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtons}>
+              {!status.snoozed ? (
+                <TouchableOpacity
+                  style={[
+                    styles.snoozeButton,
+                    { borderColor: theme.inputBorder },
+                  ]}
+                  onPress={handleSnooze}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={theme.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      typography.button,
+                      styles.snoozeButtonText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Snooze
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.waterButton, { backgroundColor: theme.primary }]}
+                onPress={handleWaterNow}
+              >
+                <Ionicons name="water" size={18} color={theme.onPrimary} />
+                <Text
+                  style={[
+                    typography.button,
+                    styles.waterButtonText,
+                    { color: theme.onPrimary },
+                  ]}
+                >
+                  Water Now
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <Text style={[typography.subtext, styles.detailText, { color: theme.textSecondary }]}>
-            Watering every {wateringIntervalDays} {pluralize(wateringIntervalDays, 'day')}
+          <Text
+            style={[
+              typography.subtext,
+              styles.detailText,
+              { color: theme.textSecondary },
+            ]}
+          >
+            Watering every {wateringIntervalDays}{" "}
+            {pluralize(wateringIntervalDays, "day")}
           </Text>
 
           <View style={styles.timelineHeader}>
@@ -182,7 +312,13 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
           </View>
 
           {photos.length === 0 ? (
-            <Text style={[typography.subtext, styles.emptyPhotos, { color: theme.textMuted }]}>
+            <Text
+              style={[
+                typography.subtext,
+                styles.emptyPhotos,
+                { color: theme.textMuted },
+              ]}
+            >
               No progress photos yet. Tap + to add one.
             </Text>
           ) : (
@@ -195,8 +331,11 @@ export default function PlantDetailScreen({ plant, onClose, onChanged, onDeleted
               renderItem={({ item }) => (
                 <View style={styles.photoTile}>
                   <Image
-                    source={{ uri: item.photoUri }}
-                    style={[styles.photoImage, { backgroundColor: theme.surface }]}
+                    source={{ uri: photoUrlMap[item.photoUri] }}
+                    style={[
+                      styles.photoImage,
+                      { backgroundColor: theme.surface },
+                    ]}
                   />
                   <Text style={[styles.photoDate, { color: theme.textMuted }]}>
                     {new Date(item.takenAt).toLocaleDateString()}
@@ -216,9 +355,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
@@ -226,10 +365,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     marginHorizontal: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   headerActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   headerButton: {
     marginLeft: 12,
@@ -239,35 +378,52 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   hero: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 16,
     marginBottom: 16,
   },
   heroPlaceholder: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   species: {
     marginBottom: 8,
   },
   statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   statusLabel: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  snoozeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+  },
+  snoozeButtonText: {
+    marginLeft: 4,
+    fontSize: 14,
   },
   waterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -279,13 +435,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   timelineHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   emptyPhotos: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 16,
   },
   photoRow: {
@@ -297,13 +453,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   photoImage: {
-    width: '100%',
+    width: "100%",
     height: 90,
     borderRadius: 10,
   },
   photoDate: {
     fontSize: 11,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

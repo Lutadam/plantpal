@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
@@ -7,21 +7,40 @@ import {
   Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { signOut } from 'firebase/auth';
-import { Ionicons } from '@expo/vector-icons';
-import { auth } from '../firebase/config';
-import { deletePlant, getPlants, waterPlant } from '../db/plantsDb';
-import { getWateringStatus, severityColor } from '../utils/watering';
-import { useTheme, typography } from '../utils/theme';
-import { confirmDeletePlant } from '../utils/confirmDelete';
-import { pluralize } from '../utils/pluralize';
-import PlantDetailScreen from './PlantDetailScreen';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  deletePlant,
+  getPlantPhotos,
+  getPlants,
+  waterPlant,
+} from "../db/plantsDb";
+import { getWateringStatus, severityColor } from "../utils/watering";
+import { useTheme, typography } from "../utils/theme";
+import { confirmDeletePlant } from "../utils/confirmDelete";
+import { showGenericErrorAlert } from "../utils/alerts";
+import { pluralize } from "../utils/pluralize";
+import {
+  deletePlantPhotoFiles,
+  useSignedPhotoUrls,
+} from "../utils/supabaseStorage";
+import PlantDetailScreen from "./PlantDetailScreen";
 
-function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
+function filterPlants(plants, query) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return plants;
+  return plants.filter(
+    (plant) =>
+      plant.name.toLowerCase().includes(normalized) ||
+      (plant.species || "").toLowerCase().includes(normalized),
+  );
+}
+
+function PlantCard({ plant, photoUrl, theme, onPress, onWaterNow, onDelete }) {
   const status = getWateringStatus(plant);
 
   return (
@@ -33,7 +52,7 @@ function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
           backgroundColor: theme.card,
           borderLeftColor: severityColor(theme, status.severity),
         },
-        theme.mode === 'dark' && {
+        theme.mode === "dark" && {
           borderTopWidth: 1,
           borderRightWidth: 1,
           borderBottomWidth: 1,
@@ -45,29 +64,44 @@ function PlantCard({ plant, theme, onPress, onWaterNow, onDelete }) {
       onPress={() => onPress(plant)}
       activeOpacity={0.7}
     >
-      {plant.photoUri ? (
-        <Image source={{ uri: plant.photoUri }} style={styles.cardPhoto} />
+      {photoUrl ? (
+        <Image source={{ uri: photoUrl }} style={styles.cardPhoto} />
       ) : (
         <View style={[styles.cardIcon, { backgroundColor: theme.surfaceAlt }]}>
           <Ionicons name="leaf" size={24} color={theme.primary} />
         </View>
       )}
       <View style={styles.cardInfo}>
-        <Text style={[typography.label, { color: theme.text }]}>{plant.name}</Text>
+        <Text style={[typography.label, { color: theme.text }]}>
+          {plant.name}
+        </Text>
         {plant.species ? (
-          <Text style={[typography.subtext, styles.cardSpecies, { color: theme.textSecondary }]}>
+          <Text
+            style={[
+              typography.subtext,
+              styles.cardSpecies,
+              { color: theme.textSecondary },
+            ]}
+          >
             {plant.species}
           </Text>
         ) : null}
         <Text
-          style={[styles.cardStatus, { color: severityColor(theme, status.severity) }]}
+          style={[
+            styles.cardStatus,
+            { color: severityColor(theme, status.severity) },
+          ]}
         >
           {status.label}
         </Text>
       </View>
       <View style={styles.cardActions}>
         <TouchableOpacity
-          style={[styles.waterButton, theme.shadow, { backgroundColor: theme.primary }]}
+          style={[
+            styles.waterButton,
+            theme.shadow,
+            { backgroundColor: theme.primary },
+          ]}
           onPress={() => onWaterNow(plant.id)}
           activeOpacity={0.8}
         >
@@ -89,12 +123,18 @@ export default function DashboardScreen({ user }) {
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlant, setSelectedPlant] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loadPlants = useCallback(async () => {
     if (!user?.uid) return;
-    const rows = await getPlants(user.uid);
-    setPlants(rows);
-    setLoading(false);
+    try {
+      const rows = await getPlants(user.uid);
+      setPlants(rows);
+    } catch (err) {
+      showGenericErrorAlert();
+    } finally {
+      setLoading(false);
+    }
   }, [user?.uid]);
 
   useEffect(() => {
@@ -104,8 +144,8 @@ export default function DashboardScreen({ user }) {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (appState.current === 'background' && nextState === 'active') {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (appState.current === "background" && nextState === "active") {
         loadPlants();
       }
       appState.current = nextState;
@@ -113,73 +153,168 @@ export default function DashboardScreen({ user }) {
     return () => subscription.remove();
   }, [loadPlants]);
 
+  const photoUrlMap = useSignedPhotoUrls(plants.map((plant) => plant.photoUri));
+
   const overdueCount = plants.filter(
-    (plant) => getWateringStatus(plant).severity === 'danger'
+    (plant) => getWateringStatus(plant).severity === "danger",
   ).length;
 
+  const filteredPlants = filterPlants(plants, searchQuery);
+
   const handleWaterNow = async (plantId) => {
-    await waterPlant(plantId);
-    loadPlants();
+    try {
+      await waterPlant(plantId);
+      loadPlants();
+    } catch (err) {
+      showGenericErrorAlert();
+    }
   };
 
   const handleDelete = (plant) => {
     confirmDeletePlant(plant.name, async () => {
-      await deletePlant(plant.id);
-      loadPlants();
+      try {
+        const growthPhotos = await getPlantPhotos(plant.id);
+        const photoPaths = [
+          plant.photoUri,
+          ...growthPhotos.map((p) => p.photoUri),
+        ];
+        await deletePlant(plant.id);
+        await deletePlantPhotoFiles(photoPaths);
+        loadPlants();
+      } catch (err) {
+        showGenericErrorAlert();
+      }
     });
   };
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
-      edges={['top']}
+      edges={["top"]}
     >
       <View style={styles.header}>
-        <Text style={[typography.screenTitle, { color: theme.text }]}>My Plants</Text>
-        <TouchableOpacity onPress={() => signOut(auth)}>
-          <Ionicons name="log-out-outline" size={26} color={theme.primary} />
-        </TouchableOpacity>
+        <Text style={[typography.screenTitle, { color: theme.text }]}>
+          My Plants
+        </Text>
       </View>
 
       {overdueCount > 0 ? (
-        <View style={[styles.banner, theme.shadow, { backgroundColor: theme.dangerBg }]}>
+        <View
+          style={[
+            styles.banner,
+            theme.shadow,
+            { backgroundColor: theme.dangerBg },
+          ]}
+        >
           <View style={[styles.bannerIcon, { backgroundColor: theme.danger }]}>
             <Ionicons name="water" size={16} color={theme.onPrimary} />
           </View>
-          <Text style={[typography.label, styles.bannerText, { color: theme.danger }]}>
-            {overdueCount} {pluralize(overdueCount, 'plant')}{' '}
-            {pluralize(overdueCount, 'needs', 'need')} watering
+          <Text
+            style={[
+              typography.label,
+              styles.bannerText,
+              { color: theme.danger },
+            ]}
+          >
+            {overdueCount} {pluralize(overdueCount, "plant")}{" "}
+            {pluralize(overdueCount, "needs", "need")} watering
           </Text>
         </View>
       ) : null}
 
       {loading ? (
-        <ActivityIndicator style={styles.loading} size="large" color={theme.primary} />
+        <ActivityIndicator
+          style={styles.loading}
+          size="large"
+          color={theme.primary}
+        />
       ) : plants.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="leaf-outline" size={48} color={theme.placeholderIcon} />
-          <Text style={[typography.sectionTitle, styles.emptyText, { color: theme.textSecondary }]}>
+          <Ionicons
+            name="leaf-outline"
+            size={48}
+            color={theme.placeholderIcon}
+          />
+          <Text
+            style={[
+              typography.sectionTitle,
+              styles.emptyText,
+              { color: theme.textSecondary },
+            ]}
+          >
             No plants yet
           </Text>
-          <Text style={[typography.subtext, styles.emptySubtext, { color: theme.textMuted }]}>
+          <Text
+            style={[
+              typography.subtext,
+              styles.emptySubtext,
+              { color: theme.textMuted },
+            ]}
+          >
             Add your first plant from the Add Plant tab
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={plants}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <PlantCard
-              plant={item}
-              theme={theme}
-              onPress={setSelectedPlant}
-              onWaterNow={handleWaterNow}
-              onDelete={handleDelete}
+        <>
+          <View
+            style={[
+              styles.searchRow,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons name="search" size={18} color={theme.textMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search by name or species"
+              placeholderTextColor={theme.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={theme.textMuted}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {filteredPlants.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search" size={40} color={theme.placeholderIcon} />
+              <Text
+                style={[
+                  typography.sectionTitle,
+                  styles.emptyText,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                No matches
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredPlants}
+              keyExtractor={(item) => String(item.id)}
+              contentContainerStyle={styles.list}
+              renderItem={({ item }) => (
+                <PlantCard
+                  plant={item}
+                  photoUrl={photoUrlMap[item.photoUri]}
+                  theme={theme}
+                  onPress={setSelectedPlant}
+                  onWaterNow={handleWaterNow}
+                  onDelete={handleDelete}
+                />
+              )}
             />
           )}
-        />
+        </>
       )}
 
       <Modal
@@ -189,6 +324,7 @@ export default function DashboardScreen({ user }) {
       >
         {selectedPlant ? (
           <PlantDetailScreen
+            user={user}
             plant={selectedPlant}
             onClose={() => setSelectedPlant(null)}
             onChanged={loadPlants}
@@ -205,9 +341,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
@@ -216,8 +352,8 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginHorizontal: 20,
     marginBottom: 14,
     padding: 12,
@@ -227,16 +363,16 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   bannerText: {
     marginLeft: 10,
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 32,
   },
   emptyText: {
@@ -244,15 +380,31 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   list: {
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    padding: 0,
+  },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 14,
     borderLeftWidth: 4,
     padding: 14,
@@ -262,8 +414,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 14,
   },
   cardPhoto: {
@@ -280,27 +432,27 @@ const styles = StyleSheet.create({
   },
   cardStatus: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 5,
   },
   cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   waterButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 6,
   },
   iconButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 6,
   },
 });

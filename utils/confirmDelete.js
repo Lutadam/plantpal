@@ -1,8 +1,22 @@
-import { Alert } from 'react-native';
+import { Alert } from "react-native";
+
+export function confirmDestructiveAction(
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+) {
+  Alert.alert(title, message, [
+    { text: "Cancel", style: "cancel" },
+    { text: confirmLabel, style: "destructive", onPress: onConfirm },
+  ]);
+}
 
 export function confirmDeletePlant(name, onConfirm) {
-  Alert.alert('Delete plant', `Are you sure you want to delete "${name}"?`, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: onConfirm },
-  ]);
+  confirmDestructiveAction(
+    "Delete plant",
+    `Are you sure you want to delete "${name}"?`,
+    "Delete",
+    onConfirm,
+  );
 }

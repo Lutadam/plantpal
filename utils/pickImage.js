@@ -1,16 +1,16 @@
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 
 export async function pickImage(source) {
   const permission =
-    source === 'camera'
+    source === "camera"
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    return { error: 'permission' };
+    return { error: "permission" };
   }
 
   const launch =
-    source === 'camera'
+    source === "camera"
       ? ImagePicker.launchCameraAsync
       : ImagePicker.launchImageLibraryAsync;
   const result = await launch({ quality: 0.6, allowsEditing: true });
@@ -20,7 +20,10 @@ export async function pickImage(source) {
   return { error: null, uri: result.assets[0].uri };
 }
 
-export async function pickImageWithHandlers(source, { onPermissionDenied, onPicked }) {
+export async function pickImageWithHandlers(
+  source,
+  { onPermissionDenied, onPicked },
+) {
   const { error, uri } = await pickImage(source);
   if (error) {
     onPermissionDenied?.();

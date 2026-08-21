@@ -1,103 +1,125 @@
-import * as SQLite from 'expo-sqlite';
-
-let dbPromise = null;
-
-function getDb() {
-  if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync('plantpal.db').then(async (db) => {
-      await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS plants (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          userId TEXT NOT NULL,
-          name TEXT NOT NULL,
-          species TEXT,
-          wateringIntervalDays INTEGER NOT NULL DEFAULT 7,
-          lastWateredAt TEXT,
-          photoUri TEXT,
-          createdAt TEXT NOT NULL
-        );
-      `);
-      try {
-        await db.execAsync('ALTER TABLE plants ADD COLUMN photoUri TEXT;');
-      } catch {
-        // column already exists
-      }
-      await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS plant_photos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          plantId INTEGER NOT NULL,
-          photoUri TEXT NOT NULL,
-          takenAt TEXT NOT NULL
-        );
-      `);
-      return db;
-    });
-  }
-  return dbPromise;
-}
+import { supabase } from "../supabase/config";
 
 export async function getPlants(userId) {
-  const db = await getDb();
-  return db.getAllAsync(
-    'SELECT * FROM plants WHERE userId = ? ORDER BY createdAt DESC;',
-    [userId]
-  );
+  const { data, error } = await supabase
+    .from("plants")
+    .select("*")
+    .eq("userId", userId)
+    .order("createdAt", { ascending: false });
+  if (error) throw error;
+  return data;
 }
 
 export async function addPlant(
   userId,
-  { name, species, wateringIntervalDays, photoUri }
+  { name, species, wateringIntervalDays, photoUri },
 ) {
-  const db = await getDb();
-  const now = new Date().toISOString();
-  await db.runAsync(
-    'INSERT INTO plants (userId, name, species, wateringIntervalDays, photoUri, createdAt) VALUES (?, ?, ?, ?, ?, ?);',
-    [userId, name, species || null, wateringIntervalDays || 7, photoUri || null, now]
-  );
+  const { data, error } = await supabase
+    .from("plants")
+    .insert({
+      userId,
+      name,
+      species: species || null,
+      wateringIntervalDays: wateringIntervalDays || 7,
+      photoUri: photoUri || null,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
 }
 
 export async function updatePlant(
   id,
-  { name, species, wateringIntervalDays, photoUri }
+  { name, species, wateringIntervalDays, photoUri },
 ) {
-  const db = await getDb();
-  await db.runAsync(
-    'UPDATE plants SET name = ?, species = ?, wateringIntervalDays = ?, photoUri = ? WHERE id = ?;',
-    [name, species || null, wateringIntervalDays || 7, photoUri || null, id]
-  );
+  const { error } = await supabase
+    .from("plants")
+    .update({
+      name,
+      species: species || null,
+      wateringIntervalDays: wateringIntervalDays || 7,
+      photoUri: photoUri || null,
+    })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function waterPlant(id) {
-  const db = await getDb();
-  await db.runAsync('UPDATE plants SET lastWateredAt = ? WHERE id = ?;', [
-    new Date().toISOString(),
-    id,
-  ]);
+  const { error } = await supabase
+    .from("plants")
+    .update({ lastWateredAt: new Date().toISOString(), snoozedUntil: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function snoozePlant(id, days = 1) {
+  const snoozedUntil = new Date(
+    Date.now() + days * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const { error } = await supabase
+    .from("plants")
+    .update({ snoozedUntil })
+    .eq("id", id);
+  if (error) throw error;
+  return snoozedUntil;
 }
 
 export async function deletePlant(id) {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM plants WHERE id = ?;', [id]);
-  await db.runAsync('DELETE FROM plant_photos WHERE plantId = ?;', [id]);
+  const { error } = await supabase.from("plants").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteAllPlantsForUser(userId) {
+  const { data: plants, error: plantsError } = await supabase
+    .from("plants")
+    .select("id, photoUri")
+    .eq("userId", userId);
+  if (plantsError) throw plantsError;
+
+  const plantIds = plants.map((plant) => plant.id);
+  let photoRows = [];
+  if (plantIds.length > 0) {
+    const { data, error } = await supabase
+      .from("plant_photos")
+      .select("photoUri")
+      .in("plantId", plantIds);
+    if (error) throw error;
+    photoRows = data;
+  }
+
+  const deletedPhotoPaths = [
+    ...plants.map((plant) => plant.photoUri).filter(Boolean),
+    ...photoRows.map((photo) => photo.photoUri).filter(Boolean),
+  ];
+
+  const { error: deleteError } = await supabase
+    .from("plants")
+    .delete()
+    .eq("userId", userId);
+  if (deleteError) throw deleteError;
+
+  return { deletedPhotoPaths };
 }
 
 export async function getPlantPhotos(plantId) {
-  const db = await getDb();
-  return db.getAllAsync(
-    'SELECT * FROM plant_photos WHERE plantId = ? ORDER BY takenAt DESC;',
-    [plantId]
-  );
+  const { data, error } = await supabase
+    .from("plant_photos")
+    .select("*")
+    .eq("plantId", plantId)
+    .order("takenAt", { ascending: false });
+  if (error) throw error;
+  return data;
 }
 
 export async function addPlantPhoto(plantId, photoUri) {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT INTO plant_photos (plantId, photoUri, takenAt) VALUES (?, ?, ?);',
-    [plantId, photoUri, new Date().toISOString()]
-  );
+  const { error } = await supabase
+    .from("plant_photos")
+    .insert({ plantId, photoUri });
+  if (error) throw error;
 }
 
 export async function deletePlantPhoto(id) {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM plant_photos WHERE id = ?;', [id]);
+  const { error } = await supabase.from("plant_photos").delete().eq("id", id);
+  if (error) throw error;
 }

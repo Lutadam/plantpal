@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -8,38 +8,44 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { pickImageWithHandlers } from '../utils/pickImage';
-import { savePlantPhoto } from '../utils/photoStorage';
-import { useTheme, typography } from '../utils/theme';
-import { DEFAULT_WATERING_INTERVAL_DAYS } from '../utils/watering';
-import { GENERIC_ERROR_MESSAGE } from '../utils/errorMessages';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { pickImageWithHandlers } from "../utils/pickImage";
+import { useTheme, typography } from "../utils/theme";
+import { DEFAULT_WATERING_INTERVAL_DAYS } from "../utils/watering";
+import { getPresetIntervalDays } from "../utils/speciesPresets";
+import { GENERIC_ERROR_MESSAGE } from "../utils/errorMessages";
 
 export default function PlantForm({
   initialValues,
+  existingPhotoDisplayUrl,
   submitLabel,
   savingLabel,
   onSubmit,
 }) {
   const theme = useTheme();
-  const [name, setName] = useState(initialValues?.name || '');
-  const [species, setSpecies] = useState(initialValues?.species || '');
+  const [name, setName] = useState(initialValues?.name || "");
+  const [species, setSpecies] = useState(initialValues?.species || "");
   const [wateringIntervalDays, setWateringIntervalDays] = useState(
-    String(initialValues?.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS)
+    String(
+      initialValues?.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS,
+    ),
   );
-  const [photoUri, setPhotoUri] = useState(initialValues?.photoUri || null);
+  const intervalTouchedRef = useRef(!!initialValues);
+  const [photoUri, setPhotoUri] = useState(null);
   const [photoChanged, setPhotoChanged] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const displayPhotoUrl = photoChanged ? photoUri : existingPhotoDisplayUrl;
 
   const handlePickPhoto = (source) =>
     pickImageWithHandlers(source, {
       onPermissionDenied: () =>
         setError(
-          source === 'camera'
-            ? 'Camera permission is required to take a photo.'
-            : 'Photo library permission is required to choose a photo.'
+          source === "camera"
+            ? "Camera permission is required to take a photo."
+            : "Photo library permission is required to choose a photo.",
         ),
       onPicked: (uri) => {
         setPhotoUri(uri);
@@ -48,32 +54,27 @@ export default function PlantForm({
     });
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
 
     if (!name.trim()) {
-      setError('Please enter a plant name.');
+      setError("Please enter a plant name.");
       return;
     }
 
     const interval = parseInt(wateringIntervalDays, 10);
     if (!interval || interval <= 0) {
-      setError('Watering interval must be a positive number of days.');
+      setError("Watering interval must be a positive number of days.");
       return;
     }
 
     setSaving(true);
     try {
-      const savedPhotoUri = photoChanged
-        ? photoUri
-          ? savePlantPhoto(photoUri)
-          : null
-        : photoUri;
-
       await onSubmit({
         name: name.trim(),
         species: species.trim(),
         wateringIntervalDays: interval,
-        photoUri: savedPhotoUri,
+        photoChanged,
+        photoUri: photoChanged ? photoUri : (initialValues?.photoUri ?? null),
       });
     } catch (err) {
       setError(GENERIC_ERROR_MESSAGE);
@@ -85,28 +86,41 @@ export default function PlantForm({
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {error ? (
-        <Text style={[typography.subtext, styles.error, { color: theme.danger }]}>
+        <Text
+          style={[typography.subtext, styles.error, { color: theme.danger }]}
+        >
           {error}
         </Text>
       ) : null}
 
       <View style={styles.photoRow}>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={[styles.photoPreview, theme.shadow]} />
+        {displayPhotoUrl ? (
+          <Image
+            source={{ uri: displayPhotoUrl }}
+            style={[styles.photoPreview, theme.shadow]}
+          />
         ) : (
           <View
-            style={[styles.photoPlaceholder, theme.shadow, { backgroundColor: theme.surface }]}
+            style={[
+              styles.photoPlaceholder,
+              theme.shadow,
+              { backgroundColor: theme.surface },
+            ]}
           >
-            <Ionicons name="leaf-outline" size={32} color={theme.placeholderIcon} />
+            <Ionicons
+              name="leaf-outline"
+              size={32}
+              color={theme.placeholderIcon}
+            />
           </View>
         )}
         <View style={styles.photoButtons}>
           <TouchableOpacity
             style={styles.photoButton}
-            onPress={() => handlePickPhoto('camera')}
+            onPress={() => handlePickPhoto("camera")}
           >
             <Ionicons name="camera" size={18} color={theme.primary} />
             <Text style={[styles.photoButtonText, { color: theme.primary }]}>
@@ -115,7 +129,7 @@ export default function PlantForm({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.photoButton}
-            onPress={() => handlePickPhoto('library')}
+            onPress={() => handlePickPhoto("library")}
           >
             <Ionicons name="images" size={18} color={theme.primary} />
             <Text style={[styles.photoButtonText, { color: theme.primary }]}>
@@ -128,7 +142,11 @@ export default function PlantForm({
       <TextInput
         style={[
           styles.input,
-          { borderColor: theme.inputBorder, backgroundColor: theme.surface, color: theme.text },
+          {
+            borderColor: theme.inputBorder,
+            backgroundColor: theme.surface,
+            color: theme.text,
+          },
         ]}
         placeholder="Plant name"
         placeholderTextColor={theme.textMuted}
@@ -138,27 +156,48 @@ export default function PlantForm({
       <TextInput
         style={[
           styles.input,
-          { borderColor: theme.inputBorder, backgroundColor: theme.surface, color: theme.text },
+          {
+            borderColor: theme.inputBorder,
+            backgroundColor: theme.surface,
+            color: theme.text,
+          },
         ]}
         placeholder="Species (optional)"
         placeholderTextColor={theme.textMuted}
         value={species}
-        onChangeText={setSpecies}
+        onChangeText={(text) => {
+          setSpecies(text);
+          if (!intervalTouchedRef.current) {
+            const preset = getPresetIntervalDays(text);
+            if (preset) setWateringIntervalDays(String(preset));
+          }
+        }}
       />
       <TextInput
         style={[
           styles.input,
-          { borderColor: theme.inputBorder, backgroundColor: theme.surface, color: theme.text },
+          {
+            borderColor: theme.inputBorder,
+            backgroundColor: theme.surface,
+            color: theme.text,
+          },
         ]}
         placeholder="Watering interval (days)"
         placeholderTextColor={theme.textMuted}
         keyboardType="number-pad"
         value={wateringIntervalDays}
-        onChangeText={setWateringIntervalDays}
+        onChangeText={(text) => {
+          intervalTouchedRef.current = true;
+          setWateringIntervalDays(text);
+        }}
       />
 
       <TouchableOpacity
-        style={[styles.button, theme.shadow, { backgroundColor: theme.primary }]}
+        style={[
+          styles.button,
+          theme.shadow,
+          { backgroundColor: theme.primary },
+        ]}
         onPress={handleSubmit}
         disabled={saving}
         activeOpacity={0.85}
@@ -174,12 +213,12 @@ export default function PlantForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
   },
   photoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   photoPreview: {
@@ -192,21 +231,21 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 16,
   },
   photoButtons: {
     flex: 1,
   },
   photoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 6,
   },
   photoButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 6,
   },
   input: {
@@ -219,11 +258,11 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 10,
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   error: {
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -1,14 +1,19 @@
 import { Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addPlant } from "../db/plantsDb";
+import { uploadPlantPhoto } from "../utils/supabaseStorage";
 import { useTheme, typography } from "../utils/theme";
 import PlantForm from "./PlantForm";
 
 export default function AddPlantScreen({ user, onAdded }) {
   const theme = useTheme();
 
-  const handleSubmit = async (values) => {
-    await addPlant(user.uid, values);
+  const handleSubmit = async ({ photoChanged, photoUri, ...values }) => {
+    const uploadedPath =
+      photoChanged && photoUri
+        ? await uploadPlantPhoto(user.uid, photoUri)
+        : null;
+    await addPlant(user.uid, { ...values, photoUri: uploadedPath });
     onAdded?.();
   };
 
@@ -17,7 +22,9 @@ export default function AddPlantScreen({ user, onAdded }) {
       style={[styles.container, { backgroundColor: theme.background }]}
       edges={["top"]}
     >
-      <Text style={[typography.screenTitle, styles.title, { color: theme.text }]}>
+      <Text
+        style={[typography.screenTitle, styles.title, { color: theme.text }]}
+      >
         Add Plant
       </Text>
       <PlantForm

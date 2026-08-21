@@ -1,12 +1,13 @@
-import * as TaskManager from 'expo-task-manager';
-import * as BackgroundTask from 'expo-background-task';
-import { getPlants } from '../db/plantsDb';
-import { isDue } from './watering';
-import { scheduleWateringAlert } from './notifications';
-import { getCurrentUserId } from './currentUser';
-import { getPreferredNotifyHour } from './notificationPrefs';
+import * as TaskManager from "expo-task-manager";
+import * as BackgroundTask from "expo-background-task";
+import { supabase } from "../supabase/config";
+import { getPlants } from "../db/plantsDb";
+import { isDue } from "./watering";
+import { scheduleWateringAlert } from "./notifications";
+import { getCurrentUserId } from "./currentUser";
+import { getPreferredNotifyHour } from "./notificationPrefs";
 
-const TASK_NAME = 'plantpal-watering-check';
+const TASK_NAME = "plantpal-watering-check";
 
 // Background tasks tick roughly every 15+ min around the clock (the OS
 // decides exactly when), so we only actually let a notification through
@@ -15,6 +16,13 @@ const TASK_NAME = 'plantpal-watering-check';
 async function checkAndNotify({ force = false } = {}) {
   const userId = await getCurrentUserId();
   if (!userId) return BackgroundTask.BackgroundTaskResult.Success;
+
+  // Postgres RLS returns an empty (not erroring) result set for a query made
+  // without a valid session, which would otherwise look identical to "no
+  // plants are due" and wrongly cancel an already-correct scheduled alert.
+  // Bail out before querying if the session isn't actually usable.
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData?.session) return BackgroundTask.BackgroundTaskResult.Failed;
 
   if (!force) {
     const preferredHour = await getPreferredNotifyHour();

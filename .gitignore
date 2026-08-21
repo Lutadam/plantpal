@@ -34,8 +34,8 @@ yarn-error.*
 .idea/
 .claude/
 
-# Firebase config (copy firebase/config.example.js)
-firebase/config.js
+# Supabase config (copy supabase/config.example.js)
+supabase/config.js
 
 # local env files
 .env
