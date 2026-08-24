@@ -5,7 +5,7 @@ import { supabase } from "../supabase/config";
 
 const BUCKET = "plant-photos";
 const SIGNED_URL_TTL_SECONDS = 3600;
-const SIGNED_URL_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const MIN_REFRESH_DELAY_MS = 30 * 1000;
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "heic", "webp"]);
 const DEFAULT_EXTENSION = "jpg";
 
@@ -68,20 +68,41 @@ export function useSignedPhotoUrls(paths) {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId;
     if (!key) {
       setUrlMap({});
       return;
     }
-    const refresh = () => {
-      getSignedPhotoUrls(key.split("|")).then((map) => {
-        if (!cancelled) setUrlMap(map);
-      });
+    const pathList = key.split("|");
+
+    const scheduleNext = () => {
+      const now = Date.now();
+      const expiries = pathList
+        .map((path) => signedUrlCache.get(path)?.expiresAt)
+        .filter(Boolean);
+      const nextExpiry = expiries.length ? Math.min(...expiries) : now;
+      timeoutId = setTimeout(
+        refresh,
+        Math.max(nextExpiry - now, MIN_REFRESH_DELAY_MS),
+      );
     };
+
+    const refresh = () => {
+      getSignedPhotoUrls(pathList)
+        .then((map) => {
+          if (cancelled) return;
+          setUrlMap(map);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) scheduleNext();
+        });
+    };
+
     refresh();
-    const interval = setInterval(refresh, SIGNED_URL_REFRESH_INTERVAL_MS);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      clearTimeout(timeoutId);
     };
   }, [key]);
 

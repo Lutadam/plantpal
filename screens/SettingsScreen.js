@@ -152,21 +152,25 @@ export default function SettingsScreen({ user }) {
       showExpoGoUnavailableAlert();
       return;
     }
-    if (value) {
-      const granted = await requestNotificationPermission();
-      if (!granted) {
-        showPermissionNeededAlert(
-          "Enable notifications in your device settings to get watering reminders.",
-        );
-        return;
+    try {
+      if (value) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          showPermissionNeededAlert(
+            "Enable notifications in your device settings to get watering reminders.",
+          );
+          return;
+        }
+        await registerWateringBackgroundTask();
+        await runWateringCheckNow();
+      } else {
+        await unregisterWateringBackgroundTask();
       }
-      await registerWateringBackgroundTask();
-      await runWateringCheckNow();
-    } else {
-      await unregisterWateringBackgroundTask();
+      setEnabled(value);
+      persist({ enabled: value });
+    } catch (err) {
+      showGenericErrorAlert();
     }
-    setEnabled(value);
-    persist({ enabled: value });
   };
 
   const handleTestNotification = async () => {
