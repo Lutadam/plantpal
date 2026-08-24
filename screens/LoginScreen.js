@@ -10,14 +10,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
 import { needsMfaChallenge } from "../utils/supabaseUser";
 import { getPasswordResetRedirectUrl } from "../utils/authDeepLink";
 import { useTheme, typography } from "../utils/theme";
-import { GENERIC_ERROR_MESSAGE } from "../utils/errorMessages";
 import MfaCodeInput from "./MfaCodeInput";
 
-function getPasswordStrength(password, theme) {
+function getPasswordStrength(password, theme, t) {
   let score = 0;
   if (password.length >= 6) score++;
   if (password.length >= 10) score++;
@@ -25,34 +25,37 @@ function getPasswordStrength(password, theme) {
   if (/\d/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { label: "Weak", color: theme.danger };
-  if (score <= 3) return { label: "Medium", color: theme.warning };
-  return { label: "Strong", color: theme.primary };
+  if (score <= 1)
+    return { level: 1, label: t("auth.strengthWeak"), color: theme.danger };
+  if (score <= 3)
+    return { level: 2, label: t("auth.strengthMedium"), color: theme.warning };
+  return { level: 3, label: t("auth.strengthStrong"), color: theme.primary };
 }
 
-function getAuthErrorMessage(error) {
+function getAuthErrorMessage(error, t) {
   switch (error?.code) {
     case "user_already_exists":
-      return "An account with this email already exists. Try logging in instead.";
+      return t("auth.errorUserExists");
     case "validation_failed":
     case "email_address_invalid":
-      return "Please enter a valid email address.";
+      return t("auth.errorInvalidEmail");
     case "weak_password":
-      return "Password should be at least 6 characters.";
+      return t("auth.errorWeakPassword");
     case "invalid_credentials":
-      return "Incorrect email or password.";
+      return t("auth.errorInvalidCredentials");
     case "over_request_rate_limit":
     case "over_email_send_rate_limit":
-      return "Too many attempts. Please try again later.";
+      return t("auth.errorRateLimited");
     case "email_not_confirmed":
-      return "Please verify your email before logging in.";
+      return t("auth.errorEmailNotConfirmed");
     default:
-      return GENERIC_ERROR_MESSAGE;
+      return t("auth.errorGeneric");
   }
 }
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -65,25 +68,20 @@ export default function LoginScreen() {
   const [mfaChallenge, setMfaChallenge] = useState(null);
   const [mfaCode, setMfaCode] = useState("");
 
-  const passwordStrength = getPasswordStrength(password, theme);
-  const strengthLevel =
-    passwordStrength.label === "Weak"
-      ? 1
-      : passwordStrength.label === "Medium"
-        ? 2
-        : 3;
+  const passwordStrength = getPasswordStrength(password, theme, t);
+  const strengthLevel = passwordStrength.level;
 
   const handleSubmit = async () => {
     setError("");
     setInfo("");
 
     if (isRegistering && password.length < 6) {
-      setError("Password should be at least 6 characters.");
+      setError(t("auth.passwordTooShort"));
       return;
     }
 
     if (isRegistering && password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("auth.passwordsDoNotMatch"));
       return;
     }
 
@@ -99,7 +97,7 @@ export default function LoginScreen() {
         setPassword("");
         setConfirmPassword("");
         setIsRegistering(false);
-        setInfo("Check your email to verify your account, then log in.");
+        setInfo(t("auth.checkEmailVerify"));
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -117,7 +115,7 @@ export default function LoginScreen() {
         }
       }
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -134,7 +132,7 @@ export default function LoginScreen() {
       });
       if (verifyError) throw verifyError;
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -145,7 +143,7 @@ export default function LoginScreen() {
     setInfo("");
 
     if (!email) {
-      setError('Enter your email above first, then tap "Forgot password?"');
+      setError(t("auth.enterEmailFirstForgot"));
       return;
     }
 
@@ -156,9 +154,9 @@ export default function LoginScreen() {
         { redirectTo: getPasswordResetRedirectUrl() },
       );
       if (resetError) throw resetError;
-      setInfo("Password reset email sent. Check your inbox.");
+      setInfo(t("auth.passwordResetSent"));
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -169,9 +167,7 @@ export default function LoginScreen() {
     setInfo("");
 
     if (!email) {
-      setError(
-        'Enter your email above first, then tap "Resend confirmation email"',
-      );
+      setError(t("auth.enterEmailFirstResend"));
       return;
     }
 
@@ -182,9 +178,9 @@ export default function LoginScreen() {
         email: email.trim(),
       });
       if (resendError) throw resendError;
-      setInfo("Confirmation email sent. Check your inbox.");
+      setInfo(t("auth.confirmationSent"));
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -202,7 +198,7 @@ export default function LoginScreen() {
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
         >
-          PlantPal
+          {t("auth.appName")}
         </Text>
 
         {error ? (
@@ -233,7 +229,7 @@ export default function LoginScreen() {
             <Text
               style={[typography.body, styles.message, { color: theme.text }]}
             >
-              Enter the 6-digit code from your authenticator app.
+              {t("auth.mfaPrompt")}
             </Text>
             <MfaCodeInput
               code={mfaCode}
@@ -255,7 +251,7 @@ export default function LoginScreen() {
                 styles.input,
                 { borderColor: theme.inputBorder, color: theme.text },
               ]}
-              placeholder="Email"
+              placeholder={t("auth.emailPlaceholder")}
               placeholderTextColor={theme.textMuted}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -267,7 +263,7 @@ export default function LoginScreen() {
             >
               <TextInput
                 style={[styles.passwordInput, { color: theme.text }]}
-                placeholder="Password"
+                placeholder={t("auth.passwordPlaceholder")}
                 placeholderTextColor={theme.textMuted}
                 secureTextEntry={!showPassword}
                 value={password}
@@ -318,7 +314,7 @@ export default function LoginScreen() {
               >
                 <TextInput
                   style={[styles.passwordInput, { color: theme.text }]}
-                  placeholder="Confirm Password"
+                  placeholder={t("auth.confirmPasswordPlaceholder")}
                   placeholderTextColor={theme.textMuted}
                   secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
@@ -341,12 +337,12 @@ export default function LoginScreen() {
               <View style={styles.forgotRow}>
                 <TouchableOpacity onPress={handleResendConfirmation}>
                   <Text style={[styles.switchText, { color: theme.primary }]}>
-                    Resend confirmation email
+                    {t("auth.resendConfirmation")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleForgotPassword}>
                   <Text style={[styles.switchText, { color: theme.primary }]}>
-                    Forgot password?
+                    {t("auth.forgotPassword")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -364,10 +360,10 @@ export default function LoginScreen() {
             >
               <Text style={[typography.button, { color: theme.onPrimary }]}>
                 {loading
-                  ? "Please wait..."
+                  ? t("auth.pleaseWait")
                   : isRegistering
-                    ? "Register"
-                    : "Log In"}
+                    ? t("auth.register")
+                    : t("auth.logIn")}
               </Text>
             </TouchableOpacity>
 
@@ -382,8 +378,8 @@ export default function LoginScreen() {
             >
               <Text style={[styles.switchText, { color: theme.primary }]}>
                 {isRegistering
-                  ? "Already have an account? Log In"
-                  : "Don't have an account? Register"}
+                  ? t("auth.switchToLogin")
+                  : t("auth.switchToRegister")}
               </Text>
             </TouchableOpacity>
           </>

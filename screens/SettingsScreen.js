@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -9,12 +10,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import MfaCodeInput from "./MfaCodeInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Constants from "expo-constants";
+import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
+import {
+  SUPPORTED_LANGUAGES,
+  LANGUAGE_LABELS,
+  setAppLanguage,
+  getSavedLanguagePreference,
+} from "../utils/i18n";
 import { deleteAllPlantsForUser } from "../db/plantsDb";
 import { deletePlantPhotoFiles } from "../utils/supabaseStorage";
 import {
@@ -105,9 +114,12 @@ function mfaReducer(state, action) {
 
 export default function SettingsScreen({ user }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { override: themeOverride, setOverride: setThemeOverride } =
     useThemeOverride();
   const [enabled, setEnabled] = useState(false);
+  const [languagePreference, setLanguagePreference] = useState("system");
+  const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [preferredTime, setPreferredTimeState] = useState({
     hour: 7,
     minute: 0,
@@ -121,6 +133,21 @@ export default function SettingsScreen({ user }) {
     const { data } = await supabase.auth.mfa.listFactors();
     dispatchMfa({ type: "loaded", factorId: data?.totp?.[0]?.id ?? null });
   }, []);
+
+  useEffect(() => {
+    getSavedLanguagePreference().then(setLanguagePreference);
+  }, []);
+
+  const handleLanguageChange = async (language) => {
+    await setAppLanguage(language);
+    setLanguagePreference(language);
+    setLanguagePickerOpen(false);
+  };
+
+  const languageDisplayLabel =
+    languagePreference === "system"
+      ? t("settings.languageAuto")
+      : LANGUAGE_LABELS[languagePreference];
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -156,9 +183,7 @@ export default function SettingsScreen({ user }) {
       if (value) {
         const granted = await requestNotificationPermission();
         if (!granted) {
-          showPermissionNeededAlert(
-            "Enable notifications in your device settings to get watering reminders.",
-          );
+          showPermissionNeededAlert(t("settings.notificationPermissionReminders"));
           return;
         }
         await registerWateringBackgroundTask();
@@ -180,14 +205,12 @@ export default function SettingsScreen({ user }) {
     }
     const sent = await sendTestNotification();
     if (!sent) {
-      showPermissionNeededAlert(
-        "Enable notifications in your device settings to receive a test notification.",
-      );
+      showPermissionNeededAlert(t("settings.notificationPermissionTest"));
       return;
     }
     Alert.alert(
-      "Test scheduled",
-      "A test notification will arrive in about 5 seconds.",
+      t("settings.testScheduledTitle"),
+      t("settings.testScheduledMessage"),
     );
   };
 
@@ -213,18 +236,18 @@ export default function SettingsScreen({ user }) {
 
   const handleLogout = () => {
     confirmDestructiveAction(
-      "Log out",
-      "Are you sure you want to log out?",
-      "Log Out",
+      t("settings.logoutConfirmTitle"),
+      t("settings.logoutConfirmMessage"),
+      t("settings.logoutConfirmButton"),
       () => supabase.auth.signOut(),
     );
   };
 
   const handleDeleteAccount = () => {
     confirmDestructiveAction(
-      "Erase my data & sign out",
-      "This permanently deletes every plant and photo you've stored (locally and in the cloud) and signs you out. Your login itself is not deleted — you can sign back in afterwards to an empty account.",
-      "Erase & Sign Out",
+      t("settings.deleteAccountTitle"),
+      t("settings.deleteAccountMessage"),
+      t("settings.deleteAccountConfirmButton"),
       async () => {
         setDeleting(true);
         try {
@@ -243,11 +266,11 @@ export default function SettingsScreen({ user }) {
 
   const handleEnableMfaPress = () => {
     Alert.alert(
-      "Enable two-factor authentication?",
-      "You'll need a 6-digit code from your authenticator app every time you log in. There is no in-app recovery if you lose access to that app — you'd need to contact support to have it removed from your account. Make sure you can keep your authenticator app long-term before continuing.",
+      t("settings.enableMfaConfirmTitle"),
+      t("settings.enableMfaConfirmMessage"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Continue", onPress: handleEnableMfa },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("settings.continueButton"), onPress: handleEnableMfa },
       ],
     );
   };
@@ -296,8 +319,8 @@ export default function SettingsScreen({ user }) {
       dispatchMfa({ type: "enrollVerified" });
     } catch (err) {
       Alert.alert(
-        "Invalid code",
-        "That code was incorrect or expired. Please try again.",
+        t("settings.invalidCodeTitle"),
+        t("settings.invalidCodeMessage"),
       );
     } finally {
       dispatchMfa({ type: "busyChanged", busy: false });
@@ -306,9 +329,9 @@ export default function SettingsScreen({ user }) {
 
   const handleDisableMfa = () => {
     confirmDestructiveAction(
-      "Disable two-factor authentication",
-      "You will only need your password to log in from now on.",
-      "Disable",
+      t("settings.disableMfaConfirmTitle"),
+      t("settings.disableMfaConfirmMessage"),
+      t("settings.disableButton"),
       async () => {
         dispatchMfa({ type: "busyChanged", busy: true });
         try {
@@ -332,7 +355,7 @@ export default function SettingsScreen({ user }) {
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
         >
-          Settings
+          {t("settings.title")}
         </Text>
 
         <View
@@ -341,7 +364,7 @@ export default function SettingsScreen({ user }) {
           <View style={styles.row}>
             <View style={styles.rowText}>
               <Text style={[typography.label, { color: theme.text }]}>
-                Account
+                {t("settings.account")}
               </Text>
               <Text
                 style={[
@@ -362,7 +385,7 @@ export default function SettingsScreen({ user }) {
           <View style={styles.row}>
             <View style={styles.rowText}>
               <Text style={[typography.label, { color: theme.text }]}>
-                Watering Reminders
+                {t("settings.wateringReminders")}
               </Text>
               <Text
                 style={[
@@ -372,8 +395,8 @@ export default function SettingsScreen({ user }) {
                 ]}
               >
                 {notificationsAvailable
-                  ? "Get notified when a plant actually needs water, checked periodically in the background"
-                  : "Requires a development build (not supported in Expo Go)"}
+                  ? t("settings.reminderDescAvailable")
+                  : t("settings.reminderDescUnavailable")}
               </Text>
             </View>
             <Switch
@@ -391,7 +414,7 @@ export default function SettingsScreen({ user }) {
             activeOpacity={0.7}
           >
             <Text style={[typography.label, { color: theme.text }]}>
-              Reminder time
+              {t("settings.reminderTime")}
             </Text>
             <View
               style={[styles.timePill, { backgroundColor: theme.surfaceAlt }]}
@@ -406,7 +429,7 @@ export default function SettingsScreen({ user }) {
 
           <View style={styles.timeRow}>
             <Text style={[typography.label, { color: theme.text }]}>
-              Snooze duration
+              {t("settings.snoozeDuration")}
             </Text>
             <View style={styles.segmentGroup}>
               {[1, 2, 3].map((days) => (
@@ -430,7 +453,7 @@ export default function SettingsScreen({ user }) {
                       },
                     ]}
                   >
-                    {days}d
+                    {t("settings.daysAbbrev", { count: days })}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -457,7 +480,7 @@ export default function SettingsScreen({ user }) {
           activeOpacity={0.7}
         >
           <Text style={[typography.button, { color: theme.primary }]}>
-            Send test notification (5s)
+            {t("settings.sendTestNotification")}
           </Text>
         </TouchableOpacity>
 
@@ -466,7 +489,7 @@ export default function SettingsScreen({ user }) {
         >
           <View style={styles.timeRow}>
             <Text style={[typography.label, { color: theme.text }]}>
-              Appearance
+              {t("settings.appearance")}
             </Text>
             <View style={styles.segmentGroup}>
               {["system", "light", "dark"].map((option) => (
@@ -495,10 +518,10 @@ export default function SettingsScreen({ user }) {
                     ]}
                   >
                     {option === "system"
-                      ? "Auto"
+                      ? t("settings.appearanceAuto")
                       : option === "light"
-                        ? "Light"
-                        : "Dark"}
+                        ? t("settings.appearanceLight")
+                        : t("settings.appearanceDark")}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -509,10 +532,75 @@ export default function SettingsScreen({ user }) {
         <View
           style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}
         >
+          <TouchableOpacity
+            style={styles.timeRow}
+            onPress={() => setLanguagePickerOpen(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[typography.label, { color: theme.text }]}>
+              {t("settings.language")}
+            </Text>
+            <View
+              style={[styles.timePill, { backgroundColor: theme.surfaceAlt }]}
+            >
+              <Text style={[typography.label, { color: theme.primary }]}>
+                {languageDisplayLabel}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <Modal
+          visible={languagePickerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setLanguagePickerOpen(false)}
+        >
+          <TouchableOpacity
+            style={styles.pickerOverlay}
+            activeOpacity={1}
+            onPress={() => setLanguagePickerOpen(false)}
+          >
+            <View
+              style={[styles.pickerSheet, { backgroundColor: theme.card }]}
+            >
+              {["system", ...SUPPORTED_LANGUAGES].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.pickerRow}
+                  onPress={() => handleLanguageChange(option)}
+                >
+                  <Text
+                    style={[
+                      typography.label,
+                      {
+                        color:
+                          languagePreference === option
+                            ? theme.primary
+                            : theme.text,
+                      },
+                    ]}
+                  >
+                    {option === "system"
+                      ? t("settings.languageAuto")
+                      : LANGUAGE_LABELS[option]}
+                  </Text>
+                  {languagePreference === option ? (
+                    <Ionicons name="checkmark" size={20} color={theme.primary} />
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        <View
+          style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}
+        >
           <View style={styles.row}>
             <View style={styles.rowText}>
               <Text style={[typography.label, { color: theme.text }]}>
-                Two-Factor Authentication
+                {t("settings.twoFactorAuth")}
               </Text>
               <Text
                 style={[
@@ -522,8 +610,8 @@ export default function SettingsScreen({ user }) {
                 ]}
               >
                 {mfa.status === "on"
-                  ? "Enabled — an authenticator code is required at login."
-                  : "Add an authenticator app code as a second login step."}
+                  ? t("settings.mfaEnabledDesc")
+                  : t("settings.mfaDisabledDesc")}
               </Text>
             </View>
           </View>
@@ -540,8 +628,7 @@ export default function SettingsScreen({ user }) {
                   { color: theme.textSecondary },
                 ]}
               >
-                Enter this key in your authenticator app, then confirm with the
-                6-digit code it generates:
+                {t("settings.mfaEnterKey")}
               </Text>
               <Text
                 selectable
@@ -584,10 +671,10 @@ export default function SettingsScreen({ user }) {
                   ]}
                 >
                   {mfa.busy
-                    ? "Please wait..."
+                    ? t("settings.pleaseWait")
                     : mfa.status === "on"
-                      ? "Disable 2FA"
-                      : "Enable 2FA"}
+                      ? t("settings.disable2fa")
+                      : t("settings.enable2fa")}
                 </Text>
               </TouchableOpacity>
             </>
@@ -604,7 +691,7 @@ export default function SettingsScreen({ user }) {
           activeOpacity={0.7}
         >
           <Text style={[typography.button, { color: theme.text }]}>
-            Log Out
+            {t("settings.logOut")}
           </Text>
         </TouchableOpacity>
 
@@ -619,7 +706,7 @@ export default function SettingsScreen({ user }) {
           activeOpacity={0.7}
         >
           <Text style={[typography.button, { color: theme.danger }]}>
-            {deleting ? "Erasing..." : "Erase My Data & Sign Out"}
+            {deleting ? t("settings.erasing") : t("settings.eraseData")}
           </Text>
         </TouchableOpacity>
 
@@ -630,7 +717,9 @@ export default function SettingsScreen({ user }) {
             { color: theme.textMuted },
           ]}
         >
-          PlantPal v{Constants.expoConfig?.version ?? "1.0.0"}
+          {t("settings.version", {
+            version: Constants.expoConfig?.version ?? "1.0.0",
+          })}
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -693,6 +782,25 @@ const styles = StyleSheet.create({
   },
   segmentGroup: {
     flexDirection: "row",
+  },
+  pickerOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    padding: 32,
+  },
+  pickerSheet: {
+    width: "100%",
+    borderRadius: 16,
+    paddingVertical: 8,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
   },
   segmentButton: {
     paddingVertical: 6,

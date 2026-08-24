@@ -10,11 +10,12 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { pickImageWithHandlers } from "../utils/pickImage";
 import { useTheme, typography } from "../utils/theme";
 import { DEFAULT_WATERING_INTERVAL_DAYS } from "../utils/watering";
 import { getPresetIntervalDays } from "../utils/speciesPresets";
-import { GENERIC_ERROR_MESSAGE } from "../utils/errorMessages";
+import { getGenericErrorMessage } from "../utils/errorMessages";
 
 const NAME_MAX_LENGTH = 60;
 const SPECIES_MAX_LENGTH = 60;
@@ -28,6 +29,7 @@ export default function PlantForm({
   onSubmit,
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [name, setName] = useState(initialValues?.name || "");
   const [species, setSpecies] = useState(initialValues?.species || "");
   const [wateringIntervalDays, setWateringIntervalDays] = useState(
@@ -48,8 +50,8 @@ export default function PlantForm({
       onPermissionDenied: () =>
         setError(
           source === "camera"
-            ? "Camera permission is required to take a photo."
-            : "Photo library permission is required to choose a photo.",
+            ? t("plantForm.cameraPermissionRequired")
+            : t("plantForm.libraryPermissionRequired"),
         ),
       onPicked: (uri) => {
         setPhotoUri(uri);
@@ -62,24 +64,28 @@ export default function PlantForm({
 
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError("Please enter a plant name.");
+      setError(t("plantForm.errorNameRequired"));
       return;
     }
     if (trimmedName.length > NAME_MAX_LENGTH) {
-      setError(`Plant name must be ${NAME_MAX_LENGTH} characters or fewer.`);
+      setError(t("plantForm.errorNameTooLong", { max: NAME_MAX_LENGTH }));
       return;
     }
 
     const trimmedSpecies = species.trim();
     if (trimmedSpecies.length > SPECIES_MAX_LENGTH) {
-      setError(`Species must be ${SPECIES_MAX_LENGTH} characters or fewer.`);
+      setError(
+        t("plantForm.errorSpeciesTooLong", { max: SPECIES_MAX_LENGTH }),
+      );
       return;
     }
 
     const interval = parseInt(wateringIntervalDays, 10);
     if (!interval || interval <= 0 || interval > MAX_WATERING_INTERVAL_DAYS) {
       setError(
-        `Watering interval must be between 1 and ${MAX_WATERING_INTERVAL_DAYS} days.`,
+        t("plantForm.errorIntervalRange", {
+          max: MAX_WATERING_INTERVAL_DAYS,
+        }),
       );
       return;
     }
@@ -94,7 +100,7 @@ export default function PlantForm({
         photoUri: photoChanged ? photoUri : (initialValues?.photoUri ?? null),
       });
     } catch (err) {
-      setError(GENERIC_ERROR_MESSAGE);
+      setError(getGenericErrorMessage());
     } finally {
       setSaving(false);
     }
@@ -141,7 +147,7 @@ export default function PlantForm({
           >
             <Ionicons name="camera" size={18} color={theme.primary} />
             <Text style={[styles.photoButtonText, { color: theme.primary }]}>
-              Take Photo
+              {t("plantForm.takePhoto")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -150,7 +156,7 @@ export default function PlantForm({
           >
             <Ionicons name="images" size={18} color={theme.primary} />
             <Text style={[styles.photoButtonText, { color: theme.primary }]}>
-              Choose Photo
+              {t("plantForm.choosePhoto")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -165,7 +171,7 @@ export default function PlantForm({
             color: theme.text,
           },
         ]}
-        placeholder="Plant name"
+        placeholder={t("plantForm.namePlaceholder")}
         placeholderTextColor={theme.textMuted}
         value={name}
         onChangeText={setName}
@@ -180,7 +186,7 @@ export default function PlantForm({
             color: theme.text,
           },
         ]}
-        placeholder="Species (optional)"
+        placeholder={t("plantForm.speciesPlaceholder")}
         placeholderTextColor={theme.textMuted}
         value={species}
         onChangeText={(text) => {
@@ -201,7 +207,7 @@ export default function PlantForm({
             color: theme.text,
           },
         ]}
-        placeholder="Watering interval (days)"
+        placeholder={t("plantForm.intervalPlaceholder")}
         placeholderTextColor={theme.textMuted}
         keyboardType="number-pad"
         value={wateringIntervalDays}

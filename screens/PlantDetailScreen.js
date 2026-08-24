@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import {
   addPlantPhoto,
   deletePlant,
@@ -34,7 +35,6 @@ import { useTheme, typography } from "../utils/theme";
 import { confirmDeletePlant } from "../utils/confirmDelete";
 import { showGenericErrorAlert } from "../utils/alerts";
 import { getSnoozeDays } from "../utils/notificationPrefs";
-import { pluralize } from "../utils/pluralize";
 import PlantForm from "./PlantForm";
 
 export default function PlantDetailScreen({
@@ -45,6 +45,7 @@ export default function PlantDetailScreen({
   onDeleted,
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [currentPlant, setCurrentPlant] = useState(plant);
   const [photos, setPhotos] = useState([]);
   const [mode, setMode] = useState("view");
@@ -129,7 +130,10 @@ export default function PlantDetailScreen({
   const addProgressPhoto = (source) =>
     pickImageWithHandlers(source, {
       onPermissionDenied: () =>
-        Alert.alert("Permission required", "Please allow access to continue."),
+        Alert.alert(
+          t("plantDetail.permissionRequiredTitle"),
+          t("plantDetail.permissionRequiredMessage"),
+        ),
       onPicked: async (uri) => {
         try {
           const uploadedPath = await uploadPlantPhoto(user.uid, uri);
@@ -142,13 +146,16 @@ export default function PlantDetailScreen({
     });
 
   const handleAddPhoto = () => {
-    Alert.alert("Add Progress Photo", undefined, [
-      { text: "Take Photo", onPress: () => addProgressPhoto("camera") },
+    Alert.alert(t("plantDetail.addPhotoTitle"), undefined, [
       {
-        text: "Choose from Library",
+        text: t("plantDetail.takePhoto"),
+        onPress: () => addProgressPhoto("camera"),
+      },
+      {
+        text: t("plantDetail.chooseFromLibrary"),
         onPress: () => addProgressPhoto("library"),
       },
-      { text: "Cancel", style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
   };
 
@@ -175,7 +182,7 @@ export default function PlantDetailScreen({
           ]}
           numberOfLines={1}
         >
-          {mode === "edit" ? "Edit Plant" : currentPlant.name}
+          {mode === "edit" ? t("plantDetail.editTitle") : currentPlant.name}
         </Text>
         {mode === "view" ? (
           <View style={styles.headerActions}>
@@ -201,8 +208,8 @@ export default function PlantDetailScreen({
         <PlantForm
           initialValues={currentPlant}
           existingPhotoDisplayUrl={photoUrlMap[currentPlant.photoUri]}
-          submitLabel="Save Changes"
-          savingLabel="Saving..."
+          submitLabel={t("plantDetail.saveChanges")}
+          savingLabel={t("plantDetail.saving")}
           onSubmit={handleEditSubmit}
         />
       ) : (
@@ -269,7 +276,7 @@ export default function PlantDetailScreen({
                       { color: theme.textSecondary },
                     ]}
                   >
-                    Snooze
+                    {t("plantDetail.snooze")}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -285,7 +292,7 @@ export default function PlantDetailScreen({
                     { color: theme.onPrimary },
                   ]}
                 >
-                  Water Now
+                  {t("plantDetail.waterNow")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -298,13 +305,12 @@ export default function PlantDetailScreen({
               { color: theme.textSecondary },
             ]}
           >
-            Watering every {wateringIntervalDays}{" "}
-            {pluralize(wateringIntervalDays, "day")}
+            {t("plantDetail.wateringEvery", { count: wateringIntervalDays })}
           </Text>
 
           <View style={styles.timelineHeader}>
             <Text style={[typography.sectionTitle, { color: theme.text }]}>
-              Growth Photos
+              {t("plantDetail.growthPhotos")}
             </Text>
             <TouchableOpacity onPress={handleAddPhoto}>
               <Ionicons name="add-circle" size={26} color={theme.primary} />
@@ -319,7 +325,7 @@ export default function PlantDetailScreen({
                 { color: theme.textMuted },
               ]}
             >
-              No progress photos yet. Tap + to add one.
+              {t("plantDetail.noPhotos")}
             </Text>
           ) : (
             <FlatList

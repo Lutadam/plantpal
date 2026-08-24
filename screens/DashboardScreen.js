@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import {
   deletePlant,
   getPlantPhotos,
@@ -23,7 +24,6 @@ import { getWateringStatus, severityColor } from "../utils/watering";
 import { useTheme, typography } from "../utils/theme";
 import { confirmDeletePlant } from "../utils/confirmDelete";
 import { showGenericErrorAlert } from "../utils/alerts";
-import { pluralize } from "../utils/pluralize";
 import {
   deletePlantPhotoFiles,
   useSignedPhotoUrls,
@@ -120,6 +120,7 @@ function PlantCard({ plant, photoUrl, theme, onPress, onWaterNow, onDelete }) {
 
 export default function DashboardScreen({ user }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlant, setSelectedPlant] = useState(null);
@@ -194,7 +195,7 @@ export default function DashboardScreen({ user }) {
     >
       <View style={styles.header}>
         <Text style={[typography.screenTitle, { color: theme.text }]}>
-          My Plants
+          {t("dashboard.title")}
         </Text>
       </View>
 
@@ -216,8 +217,7 @@ export default function DashboardScreen({ user }) {
               { color: theme.danger },
             ]}
           >
-            {overdueCount} {pluralize(overdueCount, "plant")}{" "}
-            {pluralize(overdueCount, "needs", "need")} watering
+            {t("dashboard.overdueBanner", { count: overdueCount })}
           </Text>
         </View>
       ) : null}
@@ -242,7 +242,7 @@ export default function DashboardScreen({ user }) {
               { color: theme.textSecondary },
             ]}
           >
-            No plants yet
+            {t("dashboard.emptyTitle")}
           </Text>
           <Text
             style={[
@@ -251,7 +251,7 @@ export default function DashboardScreen({ user }) {
               { color: theme.textMuted },
             ]}
           >
-            Add your first plant from the Add Plant tab
+            {t("dashboard.emptySubtitle")}
           </Text>
         </View>
       ) : (
@@ -268,7 +268,7 @@ export default function DashboardScreen({ user }) {
             <Ionicons name="search" size={18} color={theme.textMuted} />
             <TextInput
               style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Search by name or species"
+              placeholder={t("dashboard.searchPlaceholder")}
               placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -294,7 +294,7 @@ export default function DashboardScreen({ user }) {
                   { color: theme.textSecondary },
                 ]}
               >
-                No matches
+                {t("dashboard.noMatches")}
               </Text>
             </View>
           ) : (

@@ -3,6 +3,8 @@ import { Linking, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "./supabase/config";
+import "./utils/i18n";
+import { loadSavedLanguage } from "./utils/i18n";
 import LoginScreen from "./screens/LoginScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 import AddPlantScreen from "./screens/AddPlantScreen";
@@ -50,7 +52,12 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("home");
   const [onboarded, setOnboarded] = useState(false);
   const [awaitingPasswordReset, setAwaitingPasswordReset] = useState(false);
+  const [languageReady, setLanguageReady] = useState(false);
   const authEventSeq = useRef(0);
+
+  useEffect(() => {
+    loadSavedLanguage().finally(() => setLanguageReady(true));
+  }, []);
 
   useEffect(() => {
     const {
@@ -107,6 +114,8 @@ function AppContent() {
       : !onboarded
         ? "onboarding"
         : "home";
+
+  if (!languageReady) return null;
 
   return (
     <SafeAreaProvider>

@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
 import { useTheme, typography } from "../utils/theme";
-import { GENERIC_ERROR_MESSAGE } from "../utils/errorMessages";
+import { getGenericErrorMessage } from "../utils/errorMessages";
 
 export default function ResetPasswordScreen({ onDone, onCancel }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,11 +24,11 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
   const handleSubmit = async () => {
     setError("");
     if (password.length < 6) {
-      setError("Password should be at least 6 characters.");
+      setError(t("auth.passwordTooShort"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("auth.passwordsDoNotMatch"));
       return;
     }
 
@@ -38,7 +40,7 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
       if (updateError) throw updateError;
       onDone();
     } catch (err) {
-      setError(GENERIC_ERROR_MESSAGE);
+      setError(getGenericErrorMessage());
     } finally {
       setLoading(false);
     }
@@ -56,7 +58,7 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
         >
-          Set a new password
+          {t("resetPassword.title")}
         </Text>
 
         {error ? (
@@ -76,7 +78,7 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
             styles.input,
             { borderColor: theme.inputBorder, color: theme.text },
           ]}
-          placeholder="New password"
+          placeholder={t("resetPassword.newPasswordPlaceholder")}
           placeholderTextColor={theme.textMuted}
           secureTextEntry
           value={password}
@@ -87,7 +89,7 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
             styles.input,
             { borderColor: theme.inputBorder, color: theme.text },
           ]}
-          placeholder="Confirm new password"
+          placeholder={t("resetPassword.confirmNewPasswordPlaceholder")}
           placeholderTextColor={theme.textMuted}
           secureTextEntry
           value={confirmPassword}
@@ -100,13 +102,13 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
           disabled={loading || !password || !confirmPassword}
         >
           <Text style={[typography.button, { color: theme.onPrimary }]}>
-            {loading ? "Please wait..." : "Update password"}
+            {loading ? t("common.pleaseWait") : t("resetPassword.updatePassword")}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={[styles.cancelText, { color: theme.textSecondary }]}>
-            Cancel
+            {t("common.cancel")}
           </Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>

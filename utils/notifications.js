@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { storageKey } from "./storageKeys";
+import i18n from "./i18n";
 
 const REMINDER_ID = "daily-watering-reminder";
 const LAST_ALERT_KEY = storageKey("lastWateringAlert");
@@ -89,10 +90,13 @@ export async function requestNotificationPermission() {
 function wateringAlertBody(duePlants) {
   const names = duePlants.map((p) => p.name);
   if (names.length <= 3) {
-    return `Time to water: ${names.join(", ")}.`;
+    return i18n.t("notifications.wateringBody", { names: names.join(", ") });
   }
   const shown = names.slice(0, 3);
-  return `Time to water: ${shown.join(", ")} and ${names.length - shown.length} more.`;
+  return i18n.t("notifications.wateringBodyMore", {
+    names: shown.join(", "),
+    count: names.length - shown.length,
+  });
 }
 
 // Fires a notification naming the plants that are actually due, but only once
@@ -125,7 +129,7 @@ export async function scheduleWateringAlert(duePlants) {
   await Notifications.scheduleNotificationAsync({
     identifier: REMINDER_ID,
     content: {
-      title: "PlantPal",
+      title: i18n.t("notifications.appName"),
       body: wateringAlertBody(duePlants),
     },
     trigger: null,
@@ -148,8 +152,8 @@ export async function sendTestNotification() {
   await ensureAndroidChannel();
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: "PlantPal test",
-      body: "If you see this, notifications are working.",
+      title: i18n.t("notifications.testTitle"),
+      body: i18n.t("notifications.testBody"),
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

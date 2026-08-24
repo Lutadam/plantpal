@@ -3,28 +3,30 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useTranslation } from "react-i18next";
 import {
   requestNotificationPermission,
   isNotificationsAvailable,
 } from "../utils/notifications";
 import { useTheme, typography } from "../utils/theme";
 
-const PERMISSION_ITEMS = [
-  {
-    icon: "camera",
-    title: "Camera & Photos",
-    description: "Photograph your plants and track their growth over time.",
-  },
-  {
-    icon: "notifications",
-    title: "Notifications",
-    description: "Get reminded when it's time to water a plant that's due.",
-  },
-];
-
 export default function OnboardingScreen({ onDone }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [requesting, setRequesting] = useState(false);
+
+  const PERMISSION_ITEMS = [
+    {
+      icon: "camera",
+      title: t("onboarding.cameraTitle"),
+      description: t("onboarding.cameraDesc"),
+    },
+    {
+      icon: "notifications",
+      title: t("onboarding.notificationsTitle"),
+      description: t("onboarding.notificationsDesc"),
+    },
+  ];
 
   const handleContinue = async () => {
     setRequesting(true);
@@ -36,8 +38,8 @@ export default function OnboardingScreen({ onDone }) {
       }
       if (!camera.granted || !library.granted) {
         Alert.alert(
-          "Permission needed",
-          "You can enable camera and photo access later from your device settings to add plant photos.",
+          t("onboarding.permissionNeededTitle"),
+          t("onboarding.permissionDeniedMessage"),
         );
       }
     } finally {
@@ -61,7 +63,7 @@ export default function OnboardingScreen({ onDone }) {
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
         >
-          Welcome to PlantPal
+          {t("onboarding.title")}
         </Text>
         <Text
           style={[
@@ -70,7 +72,7 @@ export default function OnboardingScreen({ onDone }) {
             { color: theme.textSecondary },
           ]}
         >
-          Before you get started, PlantPal needs a couple of permissions:
+          {t("onboarding.intro")}
         </Text>
 
         {PERMISSION_ITEMS.map((item) => (
@@ -103,8 +105,7 @@ export default function OnboardingScreen({ onDone }) {
         <Text
           style={[typography.subtext, styles.note, { color: theme.textMuted }]}
         >
-          You can change these later from your device settings, or disable
-          reminders any time from Settings inside the app.
+          {t("onboarding.note")}
         </Text>
       </View>
 
@@ -119,7 +120,7 @@ export default function OnboardingScreen({ onDone }) {
         activeOpacity={0.85}
       >
         <Text style={[typography.button, { color: theme.onPrimary }]}>
-          {requesting ? "Setting up..." : "Continue"}
+          {requesting ? t("onboarding.settingUp") : t("onboarding.continue")}
         </Text>
       </TouchableOpacity>
     </SafeAreaView>

@@ -1,5 +1,6 @@
 import { Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { addPlant } from "../db/plantsDb";
 import { uploadPlantPhoto } from "../utils/supabaseStorage";
 import { useTheme, typography } from "../utils/theme";
@@ -7,6 +8,7 @@ import PlantForm from "./PlantForm";
 
 export default function AddPlantScreen({ user, onAdded }) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   const handleSubmit = async ({ photoChanged, photoUri, ...values }) => {
     const uploadedPath =
@@ -25,11 +27,11 @@ export default function AddPlantScreen({ user, onAdded }) {
       <Text
         style={[typography.screenTitle, styles.title, { color: theme.text }]}
       >
-        Add Plant
+        {t("addPlant.title")}
       </Text>
       <PlantForm
-        submitLabel="Add Plant"
-        savingLabel="Adding..."
+        submitLabel={t("addPlant.submit")}
+        savingLabel={t("addPlant.saving")}
         onSubmit={handleSubmit}
       />
     </SafeAreaView>

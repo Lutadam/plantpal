@@ -1,4 +1,5 @@
 import { Alert } from "react-native";
+import i18n from "./i18n";
 
 export function confirmDestructiveAction(
   title,
@@ -7,16 +8,16 @@ export function confirmDestructiveAction(
   onConfirm,
 ) {
   Alert.alert(title, message, [
-    { text: "Cancel", style: "cancel" },
+    { text: i18n.t("confirmDelete.cancel"), style: "cancel" },
     { text: confirmLabel, style: "destructive", onPress: onConfirm },
   ]);
 }
 
 export function confirmDeletePlant(name, onConfirm) {
   confirmDestructiveAction(
-    "Delete plant",
-    `Are you sure you want to delete "${name}"?`,
-    "Delete",
+    i18n.t("confirmDelete.deletePlantTitle"),
+    i18n.t("confirmDelete.deletePlantMessage", { name }),
+    i18n.t("confirmDelete.delete"),
     onConfirm,
   );
 }

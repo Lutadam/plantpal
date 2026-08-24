@@ -1,17 +1,18 @@
 import { Alert } from "react-native";
-import { GENERIC_ERROR_MESSAGE } from "./errorMessages";
+import { getGenericErrorMessage } from "./errorMessages";
+import i18n from "./i18n";
 
 export function showGenericErrorAlert() {
-  Alert.alert("Something went wrong", GENERIC_ERROR_MESSAGE);
+  Alert.alert(i18n.t("alerts.genericTitle"), getGenericErrorMessage());
 }
 
 export function showExpoGoUnavailableAlert() {
   Alert.alert(
-    "Not available in Expo Go",
-    "Notifications need a development build on this platform (Expo Go removed support in SDK 53+). Build with EAS to use this feature.",
+    i18n.t("alerts.expoGoUnavailableTitle"),
+    i18n.t("alerts.expoGoUnavailableMessage"),
   );
 }
 
 export function showPermissionNeededAlert(message) {
-  Alert.alert("Permission needed", message);
+  Alert.alert(i18n.t("alerts.permissionNeededTitle"), message);
 }

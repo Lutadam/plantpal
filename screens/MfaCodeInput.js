@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme, typography } from "../utils/theme";
 
 export default function MfaCodeInput({
@@ -15,6 +16,7 @@ export default function MfaCodeInput({
   busy,
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -33,7 +35,7 @@ export default function MfaCodeInput({
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={[typography.button, { color: theme.textSecondary }]}>
-            Cancel
+            {t("common.cancel")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -42,7 +44,7 @@ export default function MfaCodeInput({
           disabled={busy || code.length !== 6}
         >
           <Text style={[typography.button, { color: theme.onPrimary }]}>
-            {busy ? "Verifying..." : "Verify"}
+            {busy ? t("mfaCodeInput.verifying") : t("mfaCodeInput.verify")}
           </Text>
         </TouchableOpacity>
       </View>
