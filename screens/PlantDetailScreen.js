@@ -73,7 +73,7 @@ export default function PlantDetailScreen({
 
   const handleWaterNow = async () => {
     try {
-      await waterPlant(currentPlant.id);
+      await waterPlant(currentPlant.id, user.uid);
       setCurrentPlant((prev) => ({
         ...prev,
         lastWateredAt: new Date().toISOString(),
@@ -87,7 +87,7 @@ export default function PlantDetailScreen({
   const handleSnooze = async () => {
     try {
       const days = await getSnoozeDays();
-      const snoozedUntil = await snoozePlant(currentPlant.id, days);
+      const snoozedUntil = await snoozePlant(currentPlant.id, user.uid, days);
       setCurrentPlant((prev) => ({ ...prev, snoozedUntil }));
       onChanged?.();
     } catch (err) {
@@ -101,7 +101,7 @@ export default function PlantDetailScreen({
         ? await uploadPlantPhoto(user.uid, photoUri)
         : photoUri;
     const nextValues = { ...values, photoUri: uploadedPath };
-    await updatePlant(currentPlant.id, nextValues);
+    await updatePlant(currentPlant.id, user.uid, nextValues);
     setCurrentPlant((prev) => ({ ...prev, ...nextValues }));
     setMode("view");
     onChanged?.();
@@ -115,7 +115,7 @@ export default function PlantDetailScreen({
           ...photos.map((p) => p.photoUri),
         ];
         await Promise.all([
-          deletePlant(currentPlant.id),
+          deletePlant(currentPlant.id, user.uid),
           deletePlantPhotoFiles(photoPaths),
         ]);
         onDeleted?.();

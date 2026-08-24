@@ -16,6 +16,10 @@ import { DEFAULT_WATERING_INTERVAL_DAYS } from "../utils/watering";
 import { getPresetIntervalDays } from "../utils/speciesPresets";
 import { GENERIC_ERROR_MESSAGE } from "../utils/errorMessages";
 
+const NAME_MAX_LENGTH = 60;
+const SPECIES_MAX_LENGTH = 60;
+const MAX_WATERING_INTERVAL_DAYS = 365;
+
 export default function PlantForm({
   initialValues,
   existingPhotoDisplayUrl,
@@ -56,22 +60,35 @@ export default function PlantForm({
   const handleSubmit = async () => {
     setError("");
 
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError("Please enter a plant name.");
+      return;
+    }
+    if (trimmedName.length > NAME_MAX_LENGTH) {
+      setError(`Plant name must be ${NAME_MAX_LENGTH} characters or fewer.`);
+      return;
+    }
+
+    const trimmedSpecies = species.trim();
+    if (trimmedSpecies.length > SPECIES_MAX_LENGTH) {
+      setError(`Species must be ${SPECIES_MAX_LENGTH} characters or fewer.`);
       return;
     }
 
     const interval = parseInt(wateringIntervalDays, 10);
-    if (!interval || interval <= 0) {
-      setError("Watering interval must be a positive number of days.");
+    if (!interval || interval <= 0 || interval > MAX_WATERING_INTERVAL_DAYS) {
+      setError(
+        `Watering interval must be between 1 and ${MAX_WATERING_INTERVAL_DAYS} days.`,
+      );
       return;
     }
 
     setSaving(true);
     try {
       await onSubmit({
-        name: name.trim(),
-        species: species.trim(),
+        name: trimmedName,
+        species: trimmedSpecies,
         wateringIntervalDays: interval,
         photoChanged,
         photoUri: photoChanged ? photoUri : (initialValues?.photoUri ?? null),
@@ -152,6 +169,7 @@ export default function PlantForm({
         placeholderTextColor={theme.textMuted}
         value={name}
         onChangeText={setName}
+        maxLength={NAME_MAX_LENGTH}
       />
       <TextInput
         style={[
@@ -172,6 +190,7 @@ export default function PlantForm({
             if (preset) setWateringIntervalDays(String(preset));
           }
         }}
+        maxLength={SPECIES_MAX_LENGTH}
       />
       <TextInput
         style={[

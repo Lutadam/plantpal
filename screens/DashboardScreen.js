@@ -163,7 +163,7 @@ export default function DashboardScreen({ user }) {
 
   const handleWaterNow = async (plantId) => {
     try {
-      await waterPlant(plantId);
+      await waterPlant(plantId, user.uid);
       loadPlants();
     } catch (err) {
       showGenericErrorAlert();
@@ -178,7 +178,7 @@ export default function DashboardScreen({ user }) {
           plant.photoUri,
           ...growthPhotos.map((p) => p.photoUri),
         ];
-        await deletePlant(plant.id);
+        await deletePlant(plant.id, user.uid);
         await deletePlantPhotoFiles(photoPaths);
         loadPlants();
       } catch (err) {

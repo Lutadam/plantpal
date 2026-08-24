@@ -6,6 +6,7 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
 
 - Email/password auth with email verification and optional TOTP two-factor authentication (Supabase Auth)
 - Plant data stored in Supabase Postgres (synced across devices on the same account, RLS-scoped per user); plant and growth photos stored in a private Supabase Storage bucket, accessed via time-limited signed URLs
+- Auth session (access/refresh tokens) is AES-encrypted at rest, with the encryption key held in the OS Keychain/Keystore (`expo-secure-store`), instead of being stored as plain text
 - Requires network access — there is no offline/local data store
 - Add/edit/delete plants with name, species, watering interval, and cover photo
 - Per-plant growth photo timeline (take or pick photos over time)
@@ -66,6 +67,7 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
 
    - Copy `supabase/config.example.js` to `supabase/config.js` and fill in your project's URL and publishable key (Project Settings > API).
    - The app uses a custom URL scheme (`plantpal://`, set in `app.json`) so that password-reset emails can deep-link back into the app. This scheme is registered at native build time, so any existing development/production build made before adding it must be rebuilt (`eas build`) — a Metro/JS reload alone is not enough.
+   - The same applies to `expo-secure-store` (used for encrypted session storage, see `utils/largeSecureStore.js`): it ships native code, so any dev-client build made before it was added needs a rebuild (`eas build --profile development`, or `npx expo prebuild && npx expo run:android`/`run:ios` for a local build) before it'll work — a plain `expo start` reload isn't enough.
 
 3. Start the app:
 
@@ -96,3 +98,4 @@ The only way to recover such an account is for the project admin to remove the s
 - Supabase Auth (email/password + TOTP MFA), Supabase Postgres (plant data, RLS-scoped), and Supabase Storage (private bucket, signed URLs)
 - expo-image-picker + expo-file-system (photo capture/upload)
 - expo-notifications (local notifications), expo-task-manager + expo-background-task (periodic background watering checks), @react-native-community/datetimepicker (reminder time picker)
+- expo-secure-store + aes-js + react-native-get-random-values (encrypted auth session storage, `utils/largeSecureStore.js`)

@@ -77,6 +77,11 @@ export default function LoginScreen() {
     setError("");
     setInfo("");
 
+    if (isRegistering && password.length < 6) {
+      setError("Password should be at least 6 characters.");
+      return;
+    }
+
     if (isRegistering && password !== confirmPassword) {
       setError("Passwords do not match");
       return;

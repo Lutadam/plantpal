@@ -31,6 +31,7 @@ export async function addPlant(
 
 export async function updatePlant(
   id,
+  userId,
   { name, species, wateringIntervalDays, photoUri },
 ) {
   const { error } = await supabase
@@ -41,32 +42,39 @@ export async function updatePlant(
       wateringIntervalDays: wateringIntervalDays || 7,
       photoUri: photoUri || null,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("userId", userId);
   if (error) throw error;
 }
 
-export async function waterPlant(id) {
+export async function waterPlant(id, userId) {
   const { error } = await supabase
     .from("plants")
     .update({ lastWateredAt: new Date().toISOString(), snoozedUntil: null })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("userId", userId);
   if (error) throw error;
 }
 
-export async function snoozePlant(id, days = 1) {
+export async function snoozePlant(id, userId, days = 1) {
   const snoozedUntil = new Date(
     Date.now() + days * 24 * 60 * 60 * 1000,
   ).toISOString();
   const { error } = await supabase
     .from("plants")
     .update({ snoozedUntil })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("userId", userId);
   if (error) throw error;
   return snoozedUntil;
 }
 
-export async function deletePlant(id) {
-  const { error } = await supabase.from("plants").delete().eq("id", id);
+export async function deletePlant(id, userId) {
+  const { error } = await supabase
+    .from("plants")
+    .delete()
+    .eq("id", id)
+    .eq("userId", userId);
   if (error) throw error;
 }
 

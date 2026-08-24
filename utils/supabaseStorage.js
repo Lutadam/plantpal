@@ -6,11 +6,14 @@ import { supabase } from "../supabase/config";
 const BUCKET = "plant-photos";
 const SIGNED_URL_TTL_SECONDS = 3600;
 const SIGNED_URL_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "heic", "webp"]);
+const DEFAULT_EXTENSION = "jpg";
 
 const signedUrlCache = new Map();
 
 function extensionOf(uri) {
-  return uri.split(".").pop().split("?")[0] || "jpg";
+  const raw = (uri.split(".").pop().split("?")[0] || "").toLowerCase();
+  return ALLOWED_EXTENSIONS.has(raw) ? raw : DEFAULT_EXTENSION;
 }
 
 export async function uploadPlantPhoto(userId, localUri) {

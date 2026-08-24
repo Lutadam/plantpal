@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -29,10 +29,16 @@ export default function OnboardingScreen({ onDone }) {
   const handleContinue = async () => {
     setRequesting(true);
     try {
-      await ImagePicker.requestCameraPermissionsAsync();
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const camera = await ImagePicker.requestCameraPermissionsAsync();
+      const library = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (isNotificationsAvailable()) {
         await requestNotificationPermission();
+      }
+      if (!camera.granted || !library.granted) {
+        Alert.alert(
+          "Permission needed",
+          "You can enable camera and photo access later from your device settings to add plant photos.",
+        );
       }
     } finally {
       setRequesting(false);
