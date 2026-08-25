@@ -82,7 +82,9 @@
     "errorSpeciesTooLong": "Species must be {{max}} characters or fewer.",
     "errorIntervalRange": "Watering interval must be between 1 and {{max}} days.",
     "cameraPermissionRequired": "Camera permission is required to take a photo.",
-    "libraryPermissionRequired": "Photo library permission is required to choose a photo."
+    "libraryPermissionRequired": "Photo library permission is required to choose a photo.",
+    "identifying": "Identifying plant...",
+    "notAPlant": "Couldn't recognize a plant in that photo — you can still enter the species yourself."
   },
   "plantDetail": {
     "editTitle": "Edit Plant",
@@ -159,7 +161,8 @@
     "delete": "Delete"
   },
   "errors": {
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "network": "Couldn't reach the server. Check your internet connection and try again."
   },
   "watering": {
     "snoozedUntil": "Snoozed until {{date}}",
@@ -175,5 +178,22 @@
     "wateringBodyMore": "Time to water: {{names}} and {{count}} more.",
     "testTitle": "PlantPal test",
     "testBody": "If you see this, notifications are working."
+  },
+  "chat": {
+    "title": "Plant Care Chat",
+    "titleForPlant": "Chat about {{name}}",
+    "inputPlaceholder": "Ask about your plants...",
+    "emptyState": "Ask me anything about watering, light, pests, or plant care in general.",
+    "sending": "Thinking...",
+    "unknownSpecies": "an unknown species",
+    "errorNoKey": "AI chat isn't set up yet.",
+    "errorRateLimited": "You've hit the AI chat's usage limit for now. Try again in a little while.",
+    "errorInvalidKey": "AI chat isn't configured correctly (invalid API key).",
+    "errorNetwork": "Couldn't reach the AI service. Check your internet connection and try again.",
+    "clearChatTitle": "Clear chat",
+    "clearChatMessage": "This permanently deletes this conversation. This can't be undone.",
+    "clearChatButton": "Clear",
+    "systemPromptBase": "You are a helpful, concise plant care assistant inside the PlantPal app. Answer questions about watering, light, soil, pests, and general plant care. Keep answers short and practical. Reply in plain text only — no Markdown, no asterisks, no headings, no code formatting.",
+    "systemPromptPlantContext": "The user is asking about a specific plant they own: name \"{{name}}\", species {{species}}, watered roughly every {{intervalDays}} days."
   }
 }

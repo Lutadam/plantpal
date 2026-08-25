@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
 import { useTheme, typography } from "../utils/theme";
-import { getGenericErrorMessage } from "../utils/errorMessages";
+import { getErrorMessage } from "../utils/errorMessages";
 
 export default function ResetPasswordScreen({ onDone, onCancel }) {
   const theme = useTheme();
@@ -40,7 +40,7 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
       if (updateError) throw updateError;
       onDone();
     } catch (err) {
-      setError(getGenericErrorMessage());
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

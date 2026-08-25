@@ -82,7 +82,9 @@
     "errorSpeciesTooLong": "L'espèce doit contenir {{max}} caractères ou moins.",
     "errorIntervalRange": "L'intervalle d'arrosage doit être compris entre 1 et {{max}} jours.",
     "cameraPermissionRequired": "L'autorisation d'accès à l'appareil photo est requise pour prendre une photo.",
-    "libraryPermissionRequired": "L'autorisation d'accès à la photothèque est requise pour choisir une photo."
+    "libraryPermissionRequired": "L'autorisation d'accès à la photothèque est requise pour choisir une photo.",
+    "identifying": "Identification de la plante...",
+    "notAPlant": "Impossible de reconnaître une plante sur cette photo — vous pouvez saisir l'espèce vous-même."
   },
   "plantDetail": {
     "editTitle": "Modifier la plante",
@@ -159,7 +161,8 @@
     "delete": "Supprimer"
   },
   "errors": {
-    "generic": "Une erreur s'est produite. Veuillez réessayer."
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez."
   },
   "watering": {
     "snoozedUntil": "Reporté jusqu'au {{date}}",
@@ -175,5 +178,22 @@
     "wateringBodyMore": "À arroser : {{names}} et {{count}} de plus.",
     "testTitle": "Test PlantPal",
     "testBody": "Si vous voyez ceci, les notifications fonctionnent."
+  },
+  "chat": {
+    "title": "Chat soin des plantes",
+    "titleForPlant": "Discuter de {{name}}",
+    "inputPlaceholder": "Posez une question sur vos plantes...",
+    "emptyState": "Posez-moi n'importe quelle question sur l'arrosage, la lumière, les parasites ou l'entretien des plantes en général.",
+    "sending": "Réflexion en cours...",
+    "unknownSpecies": "une espèce inconnue",
+    "errorNoKey": "Le chat IA n'est pas encore configuré.",
+    "errorRateLimited": "Vous avez atteint la limite d'utilisation du chat IA pour le moment. Réessayez un peu plus tard.",
+    "errorInvalidKey": "Le chat IA n'est pas configuré correctement (clé API invalide).",
+    "errorNetwork": "Impossible de contacter le service IA. Vérifiez votre connexion internet et réessayez.",
+    "clearChatTitle": "Effacer la discussion",
+    "clearChatMessage": "Cela supprime définitivement cette conversation. Cette action est irréversible.",
+    "clearChatButton": "Effacer",
+    "systemPromptBase": "Vous êtes un assistant d'entretien des plantes utile et concis dans l'application PlantPal. Répondez aux questions sur l'arrosage, la lumière, le sol, les parasites et l'entretien général des plantes. Donnez des réponses courtes et pratiques. Répondez uniquement en texte brut — sans Markdown, sans astérisques, sans titres, sans mise en forme de code.",
+    "systemPromptPlantContext": "L'utilisateur pose une question sur une plante spécifique qu'il possède : nom \"{{name}}\", espèce {{species}}, arrosée environ tous les {{intervalDays}} jours."
   }
 }

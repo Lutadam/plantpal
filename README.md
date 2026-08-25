@@ -7,8 +7,11 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
 - Email/password auth with email verification and optional TOTP two-factor authentication (Supabase Auth)
 - Plant data stored in Supabase Postgres (synced across devices on the same account, RLS-scoped per user); plant and growth photos stored in a private Supabase Storage bucket, accessed via time-limited signed URLs
 - Auth session (access/refresh tokens) is AES-encrypted at rest, with the encryption key held in the OS Keychain/Keystore (`expo-secure-store`), instead of being stored as plain text
-- Requires network access — there is no offline/local data store
+- Requires network access — there is no offline/local data store; failures are classified (network-unreachable vs. generic) instead of always showing one blanket error, and the AI chat further distinguishes rate-limit/invalid-key/no-key cases
 - Add/edit/delete plants with name, species, watering interval, and cover photo
+- Species auto-suggestion from a plant's photo via the PlantNet identification API (only fills in the species field if it's still empty, never overwrites what you typed)
+- AI plant-care chat (Gemini): a general "Chat" tab for open plant-care questions, plus a per-plant chat scoped to that plant's name/species/watering interval, accessible from a plant's detail screen. History is saved per user (and per plant, for plant-scoped chats) in Supabase
+- English, Spanish, French, and Hindi UI, auto-detected from the device language with a manual override in Settings
 - Per-plant growth photo timeline (take or pick photos over time)
 - Watering status per plant (overdue / due today / due tomorrow / due later), shown with a color-coded badge on each plant card
 - Watering reminder notifications that name the specific plants due for water, checked periodically in the background (not a blanket daily ping) at a time you pick with a native clock picker
@@ -65,11 +68,42 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
        );
      ```
 
+   - Create the `chat_messages` table (used by the AI chat feature) the same way:
+
+     ```sql
+     create table public.chat_messages (
+       id uuid primary key default gen_random_uuid(),
+       "userId" uuid not null references auth.users(id) on delete cascade,
+       "plantId" uuid references public.plants(id) on delete cascade,
+       role text not null check (role in ('user', 'assistant')),
+       content text not null,
+       "createdAt" timestamptz not null default now()
+     );
+
+     alter table public.chat_messages enable row level security;
+
+     create policy "Users manage own chat messages" on public.chat_messages
+       for all using (auth.uid() = "userId") with check (auth.uid() = "userId");
+
+     create index chat_messages_user_plant_idx
+       on public.chat_messages ("userId", "plantId", "createdAt");
+     ```
+
+     `"plantId"` is `null` for messages sent from the general Chat tab, and set to a specific plant's id for messages sent from that plant's detail screen — both share this one table.
+
    - Copy `supabase/config.example.js` to `supabase/config.js` and fill in your project's URL and publishable key (Project Settings > API).
    - The app uses a custom URL scheme (`plantpal://`, set in `app.json`) so that password-reset emails can deep-link back into the app. This scheme is registered at native build time, so any existing development/production build made before adding it must be rebuilt (`eas build`) — a Metro/JS reload alone is not enough.
-   - The same applies to `expo-secure-store` (used for encrypted session storage, see `utils/largeSecureStore.js`): it ships native code, so any dev-client build made before it was added needs a rebuild (`eas build --profile development`, or `npx expo prebuild && npx expo run:android`/`run:ios` for a local build) before it'll work — a plain `expo start` reload isn't enough.
+   - The same applies to `expo-secure-store` (used for encrypted session storage, see `utils/largeSecureStore.js`) and `expo-localization` (used for device-language detection, see `utils/i18n.js`): both ship native code, so any dev-client build made before they were added needs a rebuild (`eas build --profile development`, or `npx expo prebuild && npx expo run:android`/`run:ios` for a local build) before they'll work — a plain `expo start` reload isn't enough.
 
-3. Start the app:
+3. Set up PlantNet (optional, for species auto-suggestion from photos):
+   - Get a free API key at [my.plantnet.org](https://my.plantnet.org) (Getting started > API access).
+   - Copy `plantnet/config.example.js` to `plantnet/config.js` and fill in your key. Without a real key here, the app just skips auto-identification and the species field stays manual-only.
+
+4. Set up Gemini (optional, for the AI plant-care chat):
+   - Get a free API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+   - Copy `gemini/config.example.js` to `gemini/config.js` and fill in your key. Without a real key here, chat messages just get a generic error instead of a reply.
+
+5. Start the app:
 
    ```sh
    npx expo start
@@ -96,6 +130,9 @@ The only way to recover such an account is for the project admin to remove the s
 
 - Expo SDK 57 / React Native
 - Supabase Auth (email/password + TOTP MFA), Supabase Postgres (plant data, RLS-scoped), and Supabase Storage (private bucket, signed URLs)
-- expo-image-picker + expo-file-system (photo capture/upload)
+- expo-image-picker + expo-file-system (photo capture/upload) + expo-image-manipulator (caps photos to 1600px on the longest side before upload)
 - expo-notifications (local notifications), expo-task-manager + expo-background-task (periodic background watering checks), @react-native-community/datetimepicker (reminder time picker)
 - expo-secure-store + aes-js + react-native-get-random-values (encrypted auth session storage, `utils/largeSecureStore.js`)
+- i18next + react-i18next + expo-localization (multi-language UI, `utils/i18n.js`)
+- PlantNet API (species identification from photos, `utils/plantId.js`)
+- Gemini API (AI plant-care chat, `utils/gemini.js`), chat history in Supabase Postgres (`db/chatDb.js`)

@@ -9,6 +9,7 @@ import LoginScreen from "./screens/LoginScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 import AddPlantScreen from "./screens/AddPlantScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import ChatScreen from "./screens/ChatScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import BottomNav from "./screens/BottomNav";
@@ -31,6 +32,7 @@ async function isFullyAuthenticated(session) {
 const SCREEN_COMPONENTS = {
   home: DashboardScreen,
   addPlant: AddPlantScreen,
+  chat: ChatScreen,
   settings: SettingsScreen,
 };
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -15,7 +15,8 @@ import { pickImageWithHandlers } from "../utils/pickImage";
 import { useTheme, typography } from "../utils/theme";
 import { DEFAULT_WATERING_INTERVAL_DAYS } from "../utils/watering";
 import { getPresetIntervalDays } from "../utils/speciesPresets";
-import { getGenericErrorMessage } from "../utils/errorMessages";
+import { getErrorMessage } from "../utils/errorMessages";
+import { identifySpecies } from "../utils/plantId";
 
 const NAME_MAX_LENGTH = 60;
 const SPECIES_MAX_LENGTH = 60;
@@ -38,10 +39,25 @@ export default function PlantForm({
     ),
   );
   const intervalTouchedRef = useRef(!!initialValues);
+  const speciesRef = useRef(species);
+  const mountedRef = useRef(true);
+  const identifyRequestRef = useRef(0);
   const [photoUri, setPhotoUri] = useState(null);
   const [photoChanged, setPhotoChanged] = useState(false);
+  const [identifying, setIdentifying] = useState(false);
+  const [notAPlant, setNotAPlant] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    speciesRef.current = species;
+  }, [species]);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const displayPhotoUrl = photoChanged ? photoUri : existingPhotoDisplayUrl;
 
@@ -56,6 +72,36 @@ export default function PlantForm({
       onPicked: (uri) => {
         setPhotoUri(uri);
         setPhotoChanged(true);
+        setNotAPlant(false);
+
+        if (speciesRef.current.trim()) return;
+
+        const requestId = ++identifyRequestRef.current;
+        const isStale = () =>
+          !mountedRef.current || requestId !== identifyRequestRef.current;
+
+        setIdentifying(true);
+        identifySpecies(uri)
+          .then((result) => {
+            if (isStale()) return;
+            if (result.status === "no-match") {
+              setNotAPlant(true);
+              return;
+            }
+            if (result.status !== "matched" || speciesRef.current.trim()) {
+              return;
+            }
+            const label = result.commonName || result.scientificName;
+            if (!label) return;
+            setSpecies(label);
+            if (!intervalTouchedRef.current) {
+              const preset = getPresetIntervalDays(label);
+              if (preset) setWateringIntervalDays(String(preset));
+            }
+          })
+          .finally(() => {
+            if (!isStale()) setIdentifying(false);
+          });
       },
     });
 
@@ -100,7 +146,7 @@ export default function PlantForm({
         photoUri: photoChanged ? photoUri : (initialValues?.photoUri ?? null),
       });
     } catch (err) {
-      setError(getGenericErrorMessage());
+      setError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -121,10 +167,23 @@ export default function PlantForm({
 
       <View style={styles.photoRow}>
         {displayPhotoUrl ? (
-          <Image
-            source={{ uri: displayPhotoUrl }}
-            style={[styles.photoPreview, theme.shadow]}
-          />
+          <View>
+            <Image
+              source={{ uri: displayPhotoUrl }}
+              style={[styles.photoPreview, theme.shadow]}
+            />
+            <TouchableOpacity
+              style={[styles.photoClearButton, { backgroundColor: theme.card }]}
+              onPress={() => {
+                setPhotoUri(null);
+                setPhotoChanged(true);
+                setNotAPlant(false);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={14} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
         ) : (
           <View
             style={[
@@ -162,42 +221,76 @@ export default function PlantForm({
         </View>
       </View>
 
-      <TextInput
+      {identifying ? (
+        <Text
+          style={[
+            typography.subtext,
+            styles.identifying,
+            { color: theme.textMuted },
+          ]}
+        >
+          {t("plantForm.identifying")}
+        </Text>
+      ) : null}
+
+      {!identifying && notAPlant ? (
+        <Text
+          style={[
+            typography.subtext,
+            styles.identifying,
+            { color: theme.textMuted },
+          ]}
+        >
+          {t("plantForm.notAPlant")}
+        </Text>
+      ) : null}
+
+      <View
         style={[
-          styles.input,
-          {
-            borderColor: theme.inputBorder,
-            backgroundColor: theme.surface,
-            color: theme.text,
-          },
+          styles.inputRow,
+          { borderColor: theme.inputBorder, backgroundColor: theme.surface },
         ]}
-        placeholder={t("plantForm.namePlaceholder")}
-        placeholderTextColor={theme.textMuted}
-        value={name}
-        onChangeText={setName}
-        maxLength={NAME_MAX_LENGTH}
-      />
-      <TextInput
+      >
+        <TextInput
+          style={[styles.inputField, { color: theme.text }]}
+          placeholder={t("plantForm.namePlaceholder")}
+          placeholderTextColor={theme.textMuted}
+          value={name}
+          onChangeText={setName}
+          maxLength={NAME_MAX_LENGTH}
+        />
+        {name ? (
+          <TouchableOpacity onPress={() => setName("")}>
+            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      <View
         style={[
-          styles.input,
-          {
-            borderColor: theme.inputBorder,
-            backgroundColor: theme.surface,
-            color: theme.text,
-          },
+          styles.inputRow,
+          { borderColor: theme.inputBorder, backgroundColor: theme.surface },
         ]}
-        placeholder={t("plantForm.speciesPlaceholder")}
-        placeholderTextColor={theme.textMuted}
-        value={species}
-        onChangeText={(text) => {
-          setSpecies(text);
-          if (!intervalTouchedRef.current) {
-            const preset = getPresetIntervalDays(text);
-            if (preset) setWateringIntervalDays(String(preset));
-          }
-        }}
-        maxLength={SPECIES_MAX_LENGTH}
-      />
+      >
+        <TextInput
+          style={[styles.inputField, { color: theme.text }]}
+          placeholder={t("plantForm.speciesPlaceholder")}
+          placeholderTextColor={theme.textMuted}
+          value={species}
+          onChangeText={(text) => {
+            setSpecies(text);
+            if (!intervalTouchedRef.current) {
+              const preset = getPresetIntervalDays(text);
+              if (preset) setWateringIntervalDays(String(preset));
+            }
+          }}
+          maxLength={SPECIES_MAX_LENGTH}
+        />
+        {species ? (
+          <TouchableOpacity onPress={() => setSpecies("")}>
+            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
       <TextInput
         style={[
           styles.input,
@@ -252,6 +345,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 16,
   },
+  photoClearButton: {
+    position: "absolute",
+    top: -6,
+    right: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   photoPlaceholder: {
     width: 72,
     height: 72,
@@ -262,6 +365,10 @@ const styles = StyleSheet.create({
   },
   photoButtons: {
     flex: 1,
+  },
+  identifying: {
+    marginBottom: 12,
+    marginTop: -8,
   },
   photoButton: {
     flexDirection: "row",
@@ -278,6 +385,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     marginBottom: 12,
+    fontSize: 16,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  inputField: {
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 16,
   },
   button: {

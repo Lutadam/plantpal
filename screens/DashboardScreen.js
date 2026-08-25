@@ -132,7 +132,7 @@ export default function DashboardScreen({ user }) {
       const rows = await getPlants(user.uid);
       setPlants(rows);
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     } finally {
       setLoading(false);
     }
@@ -167,7 +167,7 @@ export default function DashboardScreen({ user }) {
       await waterPlant(plantId, user.uid);
       loadPlants();
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     }
   };
 
@@ -183,7 +183,7 @@ export default function DashboardScreen({ user }) {
         await deletePlantPhotoFiles(photoPaths);
         loadPlants();
       } catch (err) {
-        showGenericErrorAlert();
+        showGenericErrorAlert(err);
       }
     });
   };

@@ -194,7 +194,7 @@ export default function SettingsScreen({ user }) {
       setEnabled(value);
       persist({ enabled: value });
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     }
   };
 
@@ -256,7 +256,7 @@ export default function SettingsScreen({ user }) {
           await AsyncStorage.removeItem(settingsKey(user.uid));
           await supabase.auth.signOut();
         } catch (err) {
-          showGenericErrorAlert();
+          showGenericErrorAlert(err);
         } finally {
           setDeleting(false);
         }
@@ -296,7 +296,7 @@ export default function SettingsScreen({ user }) {
         secret: data.totp.secret,
       });
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     } finally {
       dispatchMfa({ type: "busyChanged", busy: false });
     }
@@ -338,7 +338,7 @@ export default function SettingsScreen({ user }) {
           await supabase.auth.mfa.unenroll({ factorId: mfa.factorId });
           dispatchMfa({ type: "disabled" });
         } catch (err) {
-          showGenericErrorAlert();
+          showGenericErrorAlert(err);
         } finally {
           dispatchMfa({ type: "busyChanged", busy: false });
         }

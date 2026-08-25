@@ -82,7 +82,9 @@
     "errorSpeciesTooLong": "La especie debe tener {{max}} caracteres o menos.",
     "errorIntervalRange": "El intervalo de riego debe estar entre 1 y {{max}} días.",
     "cameraPermissionRequired": "Se necesita permiso de cámara para tomar una foto.",
-    "libraryPermissionRequired": "Se necesita permiso de galería para elegir una foto."
+    "libraryPermissionRequired": "Se necesita permiso de galería para elegir una foto.",
+    "identifying": "Identificando planta...",
+    "notAPlant": "No se reconoció ninguna planta en esa foto — puedes escribir la especie tú mismo."
   },
   "plantDetail": {
     "editTitle": "Editar planta",
@@ -159,7 +161,8 @@
     "delete": "Eliminar"
   },
   "errors": {
-    "generic": "Algo salió mal. Inténtalo de nuevo."
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "network": "No se pudo conectar con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo."
   },
   "watering": {
     "snoozedUntil": "Pospuesto hasta el {{date}}",
@@ -175,5 +178,22 @@
     "wateringBodyMore": "Hora de regar: {{names}} y {{count}} más.",
     "testTitle": "Prueba de PlantPal",
     "testBody": "Si ves esto, las notificaciones funcionan."
+  },
+  "chat": {
+    "title": "Chat de cuidado de plantas",
+    "titleForPlant": "Chat sobre {{name}}",
+    "inputPlaceholder": "Pregunta sobre tus plantas...",
+    "emptyState": "Pregúntame lo que quieras sobre riego, luz, plagas o cuidado de plantas en general.",
+    "sending": "Pensando...",
+    "unknownSpecies": "una especie desconocida",
+    "errorNoKey": "El chat de IA aún no está configurado.",
+    "errorRateLimited": "Has alcanzado el límite de uso del chat de IA por ahora. Inténtalo de nuevo en un rato.",
+    "errorInvalidKey": "El chat de IA no está configurado correctamente (clave de API no válida).",
+    "errorNetwork": "No se pudo conectar con el servicio de IA. Comprueba tu conexión a internet e inténtalo de nuevo.",
+    "clearChatTitle": "Borrar chat",
+    "clearChatMessage": "Esto elimina permanentemente esta conversación. No se puede deshacer.",
+    "clearChatButton": "Borrar",
+    "systemPromptBase": "Eres un asistente de cuidado de plantas útil y conciso dentro de la app PlantPal. Responde preguntas sobre riego, luz, tierra, plagas y cuidado general de plantas. Da respuestas breves y prácticas. Responde solo en texto plano, sin Markdown, sin asteriscos, sin encabezados ni formato de código.",
+    "systemPromptPlantContext": "El usuario pregunta sobre una planta específica que tiene: nombre \"{{name}}\", especie {{species}}, regada aproximadamente cada {{intervalDays}} días."
   }
 }

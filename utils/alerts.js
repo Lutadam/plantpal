@@ -1,9 +1,9 @@
 import { Alert } from "react-native";
-import { getGenericErrorMessage } from "./errorMessages";
+import { getErrorMessage } from "./errorMessages";
 import i18n from "./i18n";
 
-export function showGenericErrorAlert() {
-  Alert.alert(i18n.t("alerts.genericTitle"), getGenericErrorMessage());
+export function showGenericErrorAlert(err) {
+  Alert.alert(i18n.t("alerts.genericTitle"), getErrorMessage(err));
 }
 
 export function showExpoGoUnavailableAlert() {

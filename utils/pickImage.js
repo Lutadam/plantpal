@@ -1,4 +1,20 @@
 import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+
+const MAX_DIMENSION = 1600;
+
+async function capDimensions(uri, width, height) {
+  if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) {
+    return uri;
+  }
+  const resize =
+    width >= height ? { width: MAX_DIMENSION } : { height: MAX_DIMENSION };
+  const result = await manipulateAsync(uri, [{ resize }], {
+    compress: 0.8,
+    format: SaveFormat.JPEG,
+  });
+  return result.uri;
+}
 
 export async function pickImage(source) {
   const permission =
@@ -17,7 +33,10 @@ export async function pickImage(source) {
   if (result.canceled) {
     return { error: null, uri: null };
   }
-  return { error: null, uri: result.assets[0].uri };
+
+  const asset = result.assets[0];
+  const uri = await capDimensions(asset.uri, asset.width, asset.height);
+  return { error: null, uri };
 }
 
 export async function pickImageWithHandlers(

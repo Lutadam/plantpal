@@ -33,9 +33,16 @@ yarn-error.*
 # IDE / tooling
 .idea/
 .claude/
+.diff_review.txt
 
 # Supabase config (copy supabase/config.example.js)
 supabase/config.js
+
+# PlantNet config (copy plantnet/config.example.js)
+plantnet/config.js
+
+# Gemini config (copy gemini/config.example.js)
+gemini/config.js
 
 # local env files
 .env

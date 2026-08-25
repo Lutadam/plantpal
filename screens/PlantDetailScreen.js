@@ -3,6 +3,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,6 +37,7 @@ import { confirmDeletePlant } from "../utils/confirmDelete";
 import { showGenericErrorAlert } from "../utils/alerts";
 import { getSnoozeDays } from "../utils/notificationPrefs";
 import PlantForm from "./PlantForm";
+import ChatScreen from "./ChatScreen";
 
 export default function PlantDetailScreen({
   user,
@@ -49,13 +51,14 @@ export default function PlantDetailScreen({
   const [currentPlant, setCurrentPlant] = useState(plant);
   const [photos, setPhotos] = useState([]);
   const [mode, setMode] = useState("view");
+  const [chatOpen, setChatOpen] = useState(false);
 
   const loadPhotos = useCallback(async () => {
     try {
       const rows = await getPlantPhotos(plant.id);
       setPhotos(rows);
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     }
   }, [plant.id]);
 
@@ -81,7 +84,7 @@ export default function PlantDetailScreen({
       }));
       onChanged?.();
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     }
   };
 
@@ -92,7 +95,7 @@ export default function PlantDetailScreen({
       setCurrentPlant((prev) => ({ ...prev, snoozedUntil }));
       onChanged?.();
     } catch (err) {
-      showGenericErrorAlert();
+      showGenericErrorAlert(err);
     }
   };
 
@@ -122,7 +125,7 @@ export default function PlantDetailScreen({
         onDeleted?.();
         onClose?.();
       } catch (err) {
-        showGenericErrorAlert();
+        showGenericErrorAlert(err);
       }
     });
   };
@@ -140,7 +143,7 @@ export default function PlantDetailScreen({
           await addPlantPhoto(currentPlant.id, uploadedPath);
           loadPhotos();
         } catch (err) {
-          showGenericErrorAlert();
+          showGenericErrorAlert(err);
         }
       },
     });
@@ -187,6 +190,16 @@ export default function PlantDetailScreen({
         {mode === "view" ? (
           <View style={styles.headerActions}>
             <TouchableOpacity
+              onPress={() => setChatOpen(true)}
+              style={styles.headerButton}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={22}
+                color={theme.iconMuted}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => setMode("edit")}
               style={styles.headerButton}
             >
@@ -203,6 +216,18 @@ export default function PlantDetailScreen({
           <View style={{ width: 26 }} />
         )}
       </View>
+
+      <Modal
+        visible={chatOpen}
+        animationType="slide"
+        onRequestClose={() => setChatOpen(false)}
+      >
+        <ChatScreen
+          user={user}
+          plant={currentPlant}
+          onClose={() => setChatOpen(false)}
+        />
+      </Modal>
 
       {mode === "edit" ? (
         <PlantForm
