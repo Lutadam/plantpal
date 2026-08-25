@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import MfaCodeInput from "./MfaCodeInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -67,51 +66,6 @@ function formatTime({ hour, minute }) {
   return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
 }
 
-const initialMfaState = {
-  status: "off",
-  factorId: null,
-  secret: null,
-  code: "",
-  busy: false,
-};
-
-function mfaReducer(state, action) {
-  switch (action.type) {
-    case "loaded":
-      return {
-        ...initialMfaState,
-        status: action.factorId ? "on" : "off",
-        factorId: action.factorId,
-      };
-    case "busyChanged":
-      return { ...state, busy: action.busy };
-    case "enrollStarted":
-      return {
-        ...state,
-        status: "enrolling",
-        factorId: action.factorId,
-        secret: action.secret,
-        code: "",
-      };
-    case "codeChanged":
-      return { ...state, code: action.code };
-    case "enrollCancelled":
-      return {
-        ...state,
-        status: "off",
-        factorId: null,
-        secret: null,
-        code: "",
-      };
-    case "enrollVerified":
-      return { ...state, status: "on", secret: null, code: "" };
-    case "disabled":
-      return { ...state, status: "off", factorId: null };
-    default:
-      return state;
-  }
-}
-
 export default function SettingsScreen({ user }) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -127,12 +81,6 @@ export default function SettingsScreen({ user }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [snoozeDays, setSnoozeDaysState] = useState(1);
   const [deleting, setDeleting] = useState(false);
-  const [mfa, dispatchMfa] = useReducer(mfaReducer, initialMfaState);
-
-  const loadMfaStatus = useCallback(async () => {
-    const { data } = await supabase.auth.mfa.listFactors();
-    dispatchMfa({ type: "loaded", factorId: data?.totp?.[0]?.id ?? null });
-  }, []);
 
   useEffect(() => {
     getSavedLanguagePreference().then(setLanguagePreference);
@@ -161,8 +109,7 @@ export default function SettingsScreen({ user }) {
       .catch(() => {});
     getPreferredNotifyTime().then(setPreferredTimeState);
     getSnoozeDays().then(setSnoozeDaysState);
-    loadMfaStatus();
-  }, [user?.uid, loadMfaStatus]);
+  }, [user?.uid]);
 
   const persist = useCallback(
     (next) => {
@@ -259,88 +206,6 @@ export default function SettingsScreen({ user }) {
           showGenericErrorAlert(err);
         } finally {
           setDeleting(false);
-        }
-      },
-    );
-  };
-
-  const handleEnableMfaPress = () => {
-    Alert.alert(
-      t("settings.enableMfaConfirmTitle"),
-      t("settings.enableMfaConfirmMessage"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        { text: t("settings.continueButton"), onPress: handleEnableMfa },
-      ],
-    );
-  };
-
-  const handleEnableMfa = async () => {
-    dispatchMfa({ type: "busyChanged", busy: true });
-    try {
-      const { data: existing } = await supabase.auth.mfa.listFactors();
-      const stray = existing?.all?.find(
-        (factor) =>
-          factor.factor_type === "totp" && factor.status === "unverified",
-      );
-      if (stray) {
-        await supabase.auth.mfa.unenroll({ factorId: stray.id });
-      }
-      const { data, error } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
-      });
-      if (error) throw error;
-      dispatchMfa({
-        type: "enrollStarted",
-        factorId: data.id,
-        secret: data.totp.secret,
-      });
-    } catch (err) {
-      showGenericErrorAlert(err);
-    } finally {
-      dispatchMfa({ type: "busyChanged", busy: false });
-    }
-  };
-
-  const handleVerifyMfaEnrollment = async () => {
-    dispatchMfa({ type: "busyChanged", busy: true });
-    try {
-      const { data: challenge, error: challengeError } =
-        await supabase.auth.mfa.challenge({
-          factorId: mfa.factorId,
-        });
-      if (challengeError) throw challengeError;
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: mfa.factorId,
-        challengeId: challenge.id,
-        code: mfa.code.trim(),
-      });
-      if (verifyError) throw verifyError;
-      dispatchMfa({ type: "enrollVerified" });
-    } catch (err) {
-      Alert.alert(
-        t("settings.invalidCodeTitle"),
-        t("settings.invalidCodeMessage"),
-      );
-    } finally {
-      dispatchMfa({ type: "busyChanged", busy: false });
-    }
-  };
-
-  const handleDisableMfa = () => {
-    confirmDestructiveAction(
-      t("settings.disableMfaConfirmTitle"),
-      t("settings.disableMfaConfirmMessage"),
-      t("settings.disableButton"),
-      async () => {
-        dispatchMfa({ type: "busyChanged", busy: true });
-        try {
-          await supabase.auth.mfa.unenroll({ factorId: mfa.factorId });
-          dispatchMfa({ type: "disabled" });
-        } catch (err) {
-          showGenericErrorAlert(err);
-        } finally {
-          dispatchMfa({ type: "busyChanged", busy: false });
         }
       },
     );
@@ -465,6 +330,7 @@ export default function SettingsScreen({ user }) {
             value={timeToDate(preferredTime)}
             mode="time"
             is24Hour={false}
+            themeVariant={theme.mode}
             onValueChange={handleTimeChange}
             onDismiss={handleTimeDismiss}
           />
@@ -593,93 +459,6 @@ export default function SettingsScreen({ user }) {
             </View>
           </TouchableOpacity>
         </Modal>
-
-        <View
-          style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}
-        >
-          <View style={styles.row}>
-            <View style={styles.rowText}>
-              <Text style={[typography.label, { color: theme.text }]}>
-                {t("settings.twoFactorAuth")}
-              </Text>
-              <Text
-                style={[
-                  typography.subtext,
-                  styles.rowSubtext,
-                  { color: theme.textSecondary },
-                ]}
-              >
-                {mfa.status === "on"
-                  ? t("settings.mfaEnabledDesc")
-                  : t("settings.mfaDisabledDesc")}
-              </Text>
-            </View>
-          </View>
-
-          {mfa.status === "enrolling" ? (
-            <>
-              <View
-                style={[styles.divider, { backgroundColor: theme.border }]}
-              />
-              <Text
-                style={[
-                  typography.subtext,
-                  styles.rowSubtext,
-                  { color: theme.textSecondary },
-                ]}
-              >
-                {t("settings.mfaEnterKey")}
-              </Text>
-              <Text
-                selectable
-                style={[
-                  typography.label,
-                  styles.mfaSecret,
-                  { color: theme.text, borderColor: theme.inputBorder },
-                ]}
-              >
-                {mfa.secret}
-              </Text>
-              <MfaCodeInput
-                code={mfa.code}
-                onChangeCode={(code) =>
-                  dispatchMfa({ type: "codeChanged", code })
-                }
-                onVerify={handleVerifyMfaEnrollment}
-                onCancel={() => dispatchMfa({ type: "enrollCancelled" })}
-                busy={mfa.busy}
-              />
-            </>
-          ) : (
-            <>
-              <View
-                style={[styles.divider, { backgroundColor: theme.border }]}
-              />
-              <TouchableOpacity
-                style={styles.mfaActionRow}
-                onPress={
-                  mfa.status === "on" ? handleDisableMfa : handleEnableMfaPress
-                }
-                disabled={mfa.busy}
-              >
-                <Text
-                  style={[
-                    typography.button,
-                    {
-                      color: mfa.status === "on" ? theme.danger : theme.primary,
-                    },
-                  ]}
-                >
-                  {mfa.busy
-                    ? t("settings.pleaseWait")
-                    : mfa.status === "on"
-                      ? t("settings.disable2fa")
-                      : t("settings.enable2fa")}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
 
         <TouchableOpacity
           style={[
@@ -815,17 +594,5 @@ const styles = StyleSheet.create({
   version: {
     textAlign: "center",
     marginTop: 8,
-  },
-  mfaSecret: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 10,
-    marginBottom: 12,
-    letterSpacing: 1,
-    textAlign: "center",
-  },
-  mfaActionRow: {
-    paddingVertical: 14,
   },
 });

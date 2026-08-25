@@ -12,10 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
-import { needsMfaChallenge } from "../utils/supabaseUser";
-import { getPasswordResetRedirectUrl } from "../utils/authDeepLink";
 import { useTheme, typography } from "../utils/theme";
-import MfaCodeInput from "./MfaCodeInput";
+import ForgotPasswordScreen from "./ForgotPasswordScreen";
 
 function getPasswordStrength(password, theme, t) {
   let score = 0;
@@ -65,8 +63,7 @@ export default function LoginScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [mfaChallenge, setMfaChallenge] = useState(null);
-  const [mfaCode, setMfaCode] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const passwordStrength = getPasswordStrength(password, theme, t);
   const strengthLevel = passwordStrength.level;
@@ -104,57 +101,7 @@ export default function LoginScreen() {
           password,
         });
         if (signInError) throw signInError;
-
-        if (await needsMfaChallenge()) {
-          const { data: factors } = await supabase.auth.mfa.listFactors();
-          const factorId = factors?.totp?.[0]?.id;
-          const { data: challenge, error: challengeError } =
-            await supabase.auth.mfa.challenge({ factorId });
-          if (challengeError) throw challengeError;
-          setMfaChallenge({ factorId, challengeId: challenge.id });
-        }
       }
-    } catch (err) {
-      setError(getAuthErrorMessage(err, t));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyMfa = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: mfaChallenge.factorId,
-        challengeId: mfaChallenge.challengeId,
-        code: mfaCode.trim(),
-      });
-      if (verifyError) throw verifyError;
-    } catch (err) {
-      setError(getAuthErrorMessage(err, t));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    setError("");
-    setInfo("");
-
-    if (!email) {
-      setError(t("auth.enterEmailFirstForgot"));
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email.trim(),
-        { redirectTo: getPasswordResetRedirectUrl() },
-      );
-      if (resetError) throw resetError;
-      setInfo(t("auth.passwordResetSent"));
     } catch (err) {
       setError(getAuthErrorMessage(err, t));
     } finally {
@@ -186,6 +133,15 @@ export default function LoginScreen() {
     }
   };
 
+  if (showForgotPassword) {
+    return (
+      <ForgotPasswordScreen
+        initialEmail={email}
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: theme.background }}
@@ -193,7 +149,7 @@ export default function LoginScreen() {
     >
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
@@ -224,29 +180,7 @@ export default function LoginScreen() {
           </Text>
         ) : null}
 
-        {mfaChallenge ? (
-          <>
-            <Text
-              style={[typography.body, styles.message, { color: theme.text }]}
-            >
-              {t("auth.mfaPrompt")}
-            </Text>
-            <MfaCodeInput
-              code={mfaCode}
-              onChangeCode={setMfaCode}
-              onVerify={handleVerifyMfa}
-              onCancel={() => {
-                setMfaChallenge(null);
-                setMfaCode("");
-                setError("");
-                supabase.auth.signOut();
-              }}
-              busy={loading}
-            />
-          </>
-        ) : (
-          <>
-            <TextInput
+        <TextInput
               style={[
                 styles.input,
                 { borderColor: theme.inputBorder, color: theme.text },
@@ -340,7 +274,7 @@ export default function LoginScreen() {
                     {t("auth.resendConfirmation")}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleForgotPassword}>
+                <TouchableOpacity onPress={() => setShowForgotPassword(true)}>
                   <Text style={[styles.switchText, { color: theme.primary }]}>
                     {t("auth.forgotPassword")}
                   </Text>
@@ -382,8 +316,6 @@ export default function LoginScreen() {
                   : t("auth.switchToRegister")}
               </Text>
             </TouchableOpacity>
-          </>
-        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

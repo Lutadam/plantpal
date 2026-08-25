@@ -30,12 +30,9 @@
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "switchToLogin": "¿Ya tienes una cuenta? Inicia sesión",
     "switchToRegister": "¿No tienes una cuenta? Regístrate",
-    "enterEmailFirstForgot": "Escribe primero tu correo arriba y luego toca \"¿Olvidaste tu contraseña?\"",
     "enterEmailFirstResend": "Escribe primero tu correo arriba y luego toca \"Reenviar correo de confirmación\"",
     "checkEmailVerify": "Revisa tu correo para verificar tu cuenta y luego inicia sesión.",
-    "passwordResetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
     "confirmationSent": "Correo de confirmación enviado. Revisa tu bandeja de entrada.",
-    "mfaPrompt": "Introduce el código de 6 dígitos de tu app de autenticación.",
     "strengthWeak": "Débil",
     "strengthMedium": "Media",
     "strengthStrong": "Fuerte",
@@ -53,9 +50,13 @@
     "confirmNewPasswordPlaceholder": "Confirmar nueva contraseña",
     "updatePassword": "Actualizar contraseña"
   },
-  "mfaCodeInput": {
-    "verify": "Verificar",
-    "verifying": "Verificando..."
+  "forgotPassword": {
+    "title": "Restablece tu contraseña",
+    "description": "Introduce tu correo y te enviaremos un enlace para restablecer tu contraseña.",
+    "sendResetLink": "Enviar enlace de restablecimiento",
+    "sending": "Enviando...",
+    "sentMessage": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada para el enlace con el que establecer una nueva contraseña.",
+    "backToLogin": "Volver a iniciar sesión"
   },
   "dashboard": {
     "title": "Mis plantas",
@@ -84,7 +85,10 @@
     "cameraPermissionRequired": "Se necesita permiso de cámara para tomar una foto.",
     "libraryPermissionRequired": "Se necesita permiso de galería para elegir una foto.",
     "identifying": "Identificando planta...",
-    "notAPlant": "No se reconoció ninguna planta en esa foto — puedes escribir la especie tú mismo."
+    "notAPlant": "No se reconoció ninguna planta en esa foto — puedes escribir la especie tú mismo.",
+    "identifyImageTooLarge": "Esa foto es demasiado grande para identificarla. Prueba con una foto más pequeña.",
+    "identifyRateLimited": "El servicio de identificación de plantas alcanzó su límite de uso por ahora. Inténtalo más tarde o escribe la especie tú mismo.",
+    "identifyUnavailable": "No se pudo identificar la planta en este momento. Inténtalo de nuevo o escribe la especie tú mismo."
   },
   "plantDetail": {
     "editTitle": "Editar planta",
@@ -122,12 +126,6 @@
     "appearanceDark": "Oscuro",
     "language": "Idioma",
     "languageAuto": "Auto",
-    "twoFactorAuth": "Autenticación de dos factores",
-    "mfaEnabledDesc": "Activada — se requiere un código del autenticador al iniciar sesión.",
-    "mfaDisabledDesc": "Añade un código de una app de autenticación como segundo paso de inicio de sesión.",
-    "mfaEnterKey": "Introduce esta clave en tu app de autenticación y confírmala con el código de 6 dígitos que genera:",
-    "enable2fa": "Activar 2FA",
-    "disable2fa": "Desactivar 2FA",
     "pleaseWait": "Espera un momento...",
     "logOut": "Cerrar sesión",
     "eraseData": "Borrar mis datos y cerrar sesión",
@@ -138,15 +136,7 @@
     "logoutConfirmButton": "Cerrar sesión",
     "deleteAccountTitle": "Borrar mis datos y cerrar sesión",
     "deleteAccountMessage": "Esto elimina permanentemente todas las plantas y fotos que has guardado (localmente y en la nube) y cierra tu sesión. Tu inicio de sesión no se elimina — puedes volver a entrar después a una cuenta vacía.",
-    "deleteAccountConfirmButton": "Borrar y cerrar sesión",
-    "enableMfaConfirmTitle": "¿Activar la autenticación de dos factores?",
-    "enableMfaConfirmMessage": "Necesitarás un código de 6 dígitos de tu app de autenticación cada vez que inicies sesión. No hay recuperación dentro de la app si pierdes el acceso a esa app — tendrías que contactar con soporte para que la quiten de tu cuenta. Asegúrate de poder conservar tu app de autenticación a largo plazo antes de continuar.",
-    "continueButton": "Continuar",
-    "invalidCodeTitle": "Código no válido",
-    "invalidCodeMessage": "Ese código era incorrecto o expiró. Inténtalo de nuevo.",
-    "disableMfaConfirmTitle": "Desactivar la autenticación de dos factores",
-    "disableMfaConfirmMessage": "A partir de ahora solo necesitarás tu contraseña para iniciar sesión.",
-    "disableButton": "Desactivar"
+    "deleteAccountConfirmButton": "Borrar y cerrar sesión"
   },
   "alerts": {
     "genericTitle": "Algo salió mal",
@@ -162,7 +152,10 @@
   },
   "errors": {
     "generic": "Algo salió mal. Inténtalo de nuevo.",
-    "network": "No se pudo conectar con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo."
+    "network": "No se pudo conectar con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo.",
+    "rateLimited": "Demasiadas solicitudes por ahora. Espera un momento e inténtalo de nuevo.",
+    "permissionDenied": "No tienes permiso para hacer eso.",
+    "notFound": "No se encontró ese elemento — puede que ya se haya eliminado."
   },
   "watering": {
     "snoozedUntil": "Pospuesto hasta el {{date}}",

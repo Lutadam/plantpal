@@ -53,7 +53,7 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
     >
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}

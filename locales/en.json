@@ -30,12 +30,9 @@
     "forgotPassword": "Forgot password?",
     "switchToLogin": "Already have an account? Log In",
     "switchToRegister": "Don't have an account? Register",
-    "enterEmailFirstForgot": "Enter your email above first, then tap \"Forgot password?\"",
     "enterEmailFirstResend": "Enter your email above first, then tap \"Resend confirmation email\"",
     "checkEmailVerify": "Check your email to verify your account, then log in.",
-    "passwordResetSent": "Password reset email sent. Check your inbox.",
     "confirmationSent": "Confirmation email sent. Check your inbox.",
-    "mfaPrompt": "Enter the 6-digit code from your authenticator app.",
     "strengthWeak": "Weak",
     "strengthMedium": "Medium",
     "strengthStrong": "Strong",
@@ -53,9 +50,13 @@
     "confirmNewPasswordPlaceholder": "Confirm new password",
     "updatePassword": "Update password"
   },
-  "mfaCodeInput": {
-    "verify": "Verify",
-    "verifying": "Verifying..."
+  "forgotPassword": {
+    "title": "Reset your password",
+    "description": "Enter your email and we'll send you a link to reset your password.",
+    "sendResetLink": "Send Reset Link",
+    "sending": "Sending...",
+    "sentMessage": "Password reset email sent. Check your inbox for a link to set a new password.",
+    "backToLogin": "Back to Log In"
   },
   "dashboard": {
     "title": "My Plants",
@@ -84,7 +85,10 @@
     "cameraPermissionRequired": "Camera permission is required to take a photo.",
     "libraryPermissionRequired": "Photo library permission is required to choose a photo.",
     "identifying": "Identifying plant...",
-    "notAPlant": "Couldn't recognize a plant in that photo — you can still enter the species yourself."
+    "notAPlant": "Couldn't recognize a plant in that photo — you can still enter the species yourself.",
+    "identifyImageTooLarge": "That photo is too large to identify. Try a smaller photo.",
+    "identifyRateLimited": "The plant identification service has hit its usage limit for now. Try again later, or enter the species yourself.",
+    "identifyUnavailable": "Couldn't identify the plant right now. Try again, or enter the species yourself."
   },
   "plantDetail": {
     "editTitle": "Edit Plant",
@@ -122,12 +126,6 @@
     "appearanceDark": "Dark",
     "language": "Language",
     "languageAuto": "Auto",
-    "twoFactorAuth": "Two-Factor Authentication",
-    "mfaEnabledDesc": "Enabled — an authenticator code is required at login.",
-    "mfaDisabledDesc": "Add an authenticator app code as a second login step.",
-    "mfaEnterKey": "Enter this key in your authenticator app, then confirm with the 6-digit code it generates:",
-    "enable2fa": "Enable 2FA",
-    "disable2fa": "Disable 2FA",
     "pleaseWait": "Please wait...",
     "logOut": "Log Out",
     "eraseData": "Erase My Data & Sign Out",
@@ -138,15 +136,7 @@
     "logoutConfirmButton": "Log Out",
     "deleteAccountTitle": "Erase my data & sign out",
     "deleteAccountMessage": "This permanently deletes every plant and photo you've stored (locally and in the cloud) and signs you out. Your login itself is not deleted — you can sign back in afterwards to an empty account.",
-    "deleteAccountConfirmButton": "Erase & Sign Out",
-    "enableMfaConfirmTitle": "Enable two-factor authentication?",
-    "enableMfaConfirmMessage": "You'll need a 6-digit code from your authenticator app every time you log in. There is no in-app recovery if you lose access to that app — you'd need to contact support to have it removed from your account. Make sure you can keep your authenticator app long-term before continuing.",
-    "continueButton": "Continue",
-    "invalidCodeTitle": "Invalid code",
-    "invalidCodeMessage": "That code was incorrect or expired. Please try again.",
-    "disableMfaConfirmTitle": "Disable two-factor authentication",
-    "disableMfaConfirmMessage": "You will only need your password to log in from now on.",
-    "disableButton": "Disable"
+    "deleteAccountConfirmButton": "Erase & Sign Out"
   },
   "alerts": {
     "genericTitle": "Something went wrong",
@@ -162,7 +152,10 @@
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
-    "network": "Couldn't reach the server. Check your internet connection and try again."
+    "network": "Couldn't reach the server. Check your internet connection and try again.",
+    "rateLimited": "Too many requests right now. Please wait a bit and try again.",
+    "permissionDenied": "You don't have permission to do that.",
+    "notFound": "That item couldn't be found — it may have already been deleted."
   },
   "watering": {
     "snoozedUntil": "Snoozed until {{date}}",

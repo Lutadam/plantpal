@@ -30,12 +30,9 @@
     "forgotPassword": "Mot de passe oublié ?",
     "switchToLogin": "Vous avez déjà un compte ? Connectez-vous",
     "switchToRegister": "Pas de compte ? Inscrivez-vous",
-    "enterEmailFirstForgot": "Saisissez d'abord votre e-mail ci-dessus, puis appuyez sur \"Mot de passe oublié ?\"",
     "enterEmailFirstResend": "Saisissez d'abord votre e-mail ci-dessus, puis appuyez sur \"Renvoyer l'e-mail de confirmation\"",
     "checkEmailVerify": "Vérifiez votre e-mail pour confirmer votre compte, puis connectez-vous.",
-    "passwordResetSent": "E-mail de réinitialisation envoyé. Vérifiez votre boîte de réception.",
     "confirmationSent": "E-mail de confirmation envoyé. Vérifiez votre boîte de réception.",
-    "mfaPrompt": "Saisissez le code à 6 chiffres de votre application d'authentification.",
     "strengthWeak": "Faible",
     "strengthMedium": "Moyen",
     "strengthStrong": "Fort",
@@ -53,9 +50,13 @@
     "confirmNewPasswordPlaceholder": "Confirmer le nouveau mot de passe",
     "updatePassword": "Mettre à jour le mot de passe"
   },
-  "mfaCodeInput": {
-    "verify": "Vérifier",
-    "verifying": "Vérification..."
+  "forgotPassword": {
+    "title": "Réinitialisez votre mot de passe",
+    "description": "Saisissez votre e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "sending": "Envoi en cours...",
+    "sentMessage": "E-mail de réinitialisation envoyé. Vérifiez votre boîte de réception pour le lien de définition d'un nouveau mot de passe.",
+    "backToLogin": "Retour à la connexion"
   },
   "dashboard": {
     "title": "Mes plantes",
@@ -84,7 +85,10 @@
     "cameraPermissionRequired": "L'autorisation d'accès à l'appareil photo est requise pour prendre une photo.",
     "libraryPermissionRequired": "L'autorisation d'accès à la photothèque est requise pour choisir une photo.",
     "identifying": "Identification de la plante...",
-    "notAPlant": "Impossible de reconnaître une plante sur cette photo — vous pouvez saisir l'espèce vous-même."
+    "notAPlant": "Impossible de reconnaître une plante sur cette photo — vous pouvez saisir l'espèce vous-même.",
+    "identifyImageTooLarge": "Cette photo est trop grande pour être identifiée. Essayez une photo plus petite.",
+    "identifyRateLimited": "Le service d'identification des plantes a atteint sa limite d'utilisation pour le moment. Réessayez plus tard, ou saisissez l'espèce vous-même.",
+    "identifyUnavailable": "Impossible d'identifier la plante pour le moment. Réessayez, ou saisissez l'espèce vous-même."
   },
   "plantDetail": {
     "editTitle": "Modifier la plante",
@@ -122,12 +126,6 @@
     "appearanceDark": "Sombre",
     "language": "Langue",
     "languageAuto": "Auto",
-    "twoFactorAuth": "Authentification à deux facteurs",
-    "mfaEnabledDesc": "Activée — un code d'authentification est requis à la connexion.",
-    "mfaDisabledDesc": "Ajoutez un code d'application d'authentification comme deuxième étape de connexion.",
-    "mfaEnterKey": "Saisissez cette clé dans votre application d'authentification, puis confirmez avec le code à 6 chiffres généré :",
-    "enable2fa": "Activer la 2FA",
-    "disable2fa": "Désactiver la 2FA",
     "pleaseWait": "Veuillez patienter...",
     "logOut": "Se déconnecter",
     "eraseData": "Effacer mes données et me déconnecter",
@@ -138,15 +136,7 @@
     "logoutConfirmButton": "Se déconnecter",
     "deleteAccountTitle": "Effacer mes données et me déconnecter",
     "deleteAccountMessage": "Cela supprime définitivement toutes les plantes et photos que vous avez enregistrées (localement et dans le cloud) et vous déconnecte. Votre identifiant de connexion n'est pas supprimé — vous pourrez vous reconnecter ensuite à un compte vide.",
-    "deleteAccountConfirmButton": "Effacer et se déconnecter",
-    "enableMfaConfirmTitle": "Activer l'authentification à deux facteurs ?",
-    "enableMfaConfirmMessage": "Vous aurez besoin d'un code à 6 chiffres de votre application d'authentification à chaque connexion. Il n'y a pas de récupération dans l'application si vous perdez l'accès à cette application — vous devrez contacter le support pour la faire retirer de votre compte. Assurez-vous de pouvoir conserver votre application d'authentification à long terme avant de continuer.",
-    "continueButton": "Continuer",
-    "invalidCodeTitle": "Code invalide",
-    "invalidCodeMessage": "Ce code était incorrect ou a expiré. Veuillez réessayer.",
-    "disableMfaConfirmTitle": "Désactiver l'authentification à deux facteurs",
-    "disableMfaConfirmMessage": "Vous n'aurez plus besoin que de votre mot de passe pour vous connecter désormais.",
-    "disableButton": "Désactiver"
+    "deleteAccountConfirmButton": "Effacer et se déconnecter"
   },
   "alerts": {
     "genericTitle": "Une erreur s'est produite",
@@ -162,7 +152,10 @@
   },
   "errors": {
     "generic": "Une erreur s'est produite. Veuillez réessayer.",
-    "network": "Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez."
+    "network": "Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.",
+    "rateLimited": "Trop de requêtes pour le moment. Veuillez patienter puis réessayer.",
+    "permissionDenied": "Vous n'avez pas la permission de faire cela.",
+    "notFound": "Cet élément n'a pas été trouvé — il a peut-être déjà été supprimé."
   },
   "watering": {
     "snoozedUntil": "Reporté jusqu'au {{date}}",

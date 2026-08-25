@@ -4,18 +4,22 @@ import { PLANTNET_API_KEY } from "../plantnet/config";
 const IDENTIFY_URL = "https://my-api.plantnet.org/v2/identify/all";
 const MIN_CONFIDENCE = 0.2;
 
-// status: "unavailable" (no key / network / server error — stay silent, feature just
-// isn't usable right now) | "no-match" (PlantNet responded but wasn't confident enough
-// — safe to tell the user this doesn't look like a recognizable plant) | "matched"
+// status: "not-configured" (no API key — dev setup issue, stay silent) | "too-large"
+// (image exceeded PlantNet's upload size limit) | "rate-limited" (free-tier daily
+// quota hit) | "network-error" (request never reached/completed — e.g. a flaky
+// connection on a real device) | "unavailable" (any other server-side failure) |
+// "no-match" (PlantNet responded but wasn't confident enough — safe to tell the user
+// this doesn't look like a recognizable plant) | "matched"
 export async function identifySpecies(localUri) {
   if (!PLANTNET_API_KEY || PLANTNET_API_KEY === "YOUR_PLANTNET_API_KEY") {
-    return { status: "unavailable" };
+    return { status: "not-configured" };
   }
 
+  let uploadResult;
   try {
     const file = new File(localUri);
 
-    const uploadResult = await file.upload(
+    uploadResult = await file.upload(
       `${IDENTIFY_URL}?api-key=${PLANTNET_API_KEY}`,
       {
         uploadType: UploadType.MULTIPART,
@@ -24,10 +28,21 @@ export async function identifySpecies(localUri) {
         parameters: { organs: "auto" },
       },
     );
-    if (uploadResult.status < 200 || uploadResult.status >= 300) {
-      return { status: "unavailable" };
-    }
+  } catch {
+    return { status: "network-error" };
+  }
 
+  if (uploadResult.status === 413) {
+    return { status: "too-large" };
+  }
+  if (uploadResult.status === 429) {
+    return { status: "rate-limited" };
+  }
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    return { status: "unavailable" };
+  }
+
+  try {
     const data = JSON.parse(uploadResult.body);
     const top = data.results?.[0];
     if (!top || top.score < MIN_CONFIDENCE) {

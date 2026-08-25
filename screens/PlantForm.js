@@ -73,6 +73,7 @@ export default function PlantForm({
         setPhotoUri(uri);
         setPhotoChanged(true);
         setNotAPlant(false);
+        setError("");
 
         if (speciesRef.current.trim()) return;
 
@@ -86,6 +87,22 @@ export default function PlantForm({
             if (isStale()) return;
             if (result.status === "no-match") {
               setNotAPlant(true);
+              return;
+            }
+            if (result.status === "too-large") {
+              setError(t("plantForm.identifyImageTooLarge"));
+              return;
+            }
+            if (result.status === "rate-limited") {
+              setError(t("plantForm.identifyRateLimited"));
+              return;
+            }
+            if (result.status === "network-error") {
+              setError(t("errors.network"));
+              return;
+            }
+            if (result.status === "unavailable") {
+              setError(t("plantForm.identifyUnavailable"));
               return;
             }
             if (result.status !== "matched" || speciesRef.current.trim()) {

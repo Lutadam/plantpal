@@ -14,7 +14,7 @@ import OnboardingScreen from "./screens/OnboardingScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import BottomNav from "./screens/BottomNav";
 import { ThemeProvider, useTheme } from "./utils/theme";
-import { toAppUser, needsMfaChallenge } from "./utils/supabaseUser";
+import { toAppUser } from "./utils/supabaseUser";
 import { handlePasswordRecoveryUrl } from "./utils/authDeepLink";
 import {
   hasCompletedOnboarding,
@@ -23,10 +23,8 @@ import {
 } from "./utils/currentUser";
 import { TABS } from "./utils/tabs";
 
-async function isFullyAuthenticated(session) {
-  if (!session?.user?.email_confirmed_at) return false;
-  if (await needsMfaChallenge()) return false;
-  return true;
+function isFullyAuthenticated(session) {
+  return !!session?.user?.email_confirmed_at;
 }
 
 const SCREEN_COMPONENTS = {

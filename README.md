@@ -4,7 +4,7 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
 
 ## Features
 
-- Email/password auth with email verification and optional TOTP two-factor authentication (Supabase Auth)
+- Email/password auth with email verification (Supabase Auth)
 - Plant data stored in Supabase Postgres (synced across devices on the same account, RLS-scoped per user); plant and growth photos stored in a private Supabase Storage bucket, accessed via time-limited signed URLs
 - Auth session (access/refresh tokens) is AES-encrypted at rest, with the encryption key held in the OS Keychain/Keystore (`expo-secure-store`), instead of being stored as plain text
 - Requires network access — there is no offline/local data store; failures are classified (network-unreachable vs. generic) instead of always showing one blanket error, and the AI chat further distinguishes rate-limit/invalid-key/no-key cases
@@ -27,7 +27,7 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
    ```
 
 2. Set up Supabase:
-   - Create a project at [supabase.com](https://supabase.com/) and enable **Authentication > Email** (confirm-email on by default) and **Authentication > MFA (TOTP)**.
+   - Create a project at [supabase.com](https://supabase.com/) and enable **Authentication > Email** (confirm-email on by default).
    - Create a **private** Storage bucket named `plant-photos`, and add an RLS policy on `storage.objects` restricting access to each user's own folder:
      ```sql
      (bucket_id = 'plant-photos' AND (storage.foldername(name))[1] = auth.uid()::text)
@@ -115,21 +115,10 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
    eas build --profile development
    ```
 
-## Two-factor authentication recovery
-
-Supabase's TOTP MFA has no built-in backup/recovery codes. If a user loses their authenticator app (lost phone, uninstalled app, etc.) after enabling 2FA, they can still log in with their password but will be stuck at the 6-digit code prompt with no way to disable MFA from inside the app — the app warns about this before a user turns 2FA on.
-
-The only way to recover such an account is for the project admin to remove the stuck user's MFA factor from the Supabase dashboard:
-
-1. Go to **SQL Editor** in the Supabase dashboard.
-2. Find the user's factor: `select id, factor_type, status from auth.mfa_factors where user_id = (select id from auth.users where email = '<their email>');`
-3. Delete it: `delete from auth.mfa_factors where id = '<factor id from above>';`
-4. The user can now log in with just their password, and re-enroll 2FA if they want.
-
 ## Tech stack
 
 - Expo SDK 57 / React Native
-- Supabase Auth (email/password + TOTP MFA), Supabase Postgres (plant data, RLS-scoped), and Supabase Storage (private bucket, signed URLs)
+- Supabase Auth (email/password), Supabase Postgres (plant data, RLS-scoped), and Supabase Storage (private bucket, signed URLs)
 - expo-image-picker + expo-file-system (photo capture/upload) + expo-image-manipulator (caps photos to 1600px on the longest side before upload)
 - expo-notifications (local notifications), expo-task-manager + expo-background-task (periodic background watering checks), @react-native-community/datetimepicker (reminder time picker)
 - expo-secure-store + aes-js + react-native-get-random-values (encrypted auth session storage, `utils/largeSecureStore.js`)
