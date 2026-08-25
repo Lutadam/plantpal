@@ -4,12 +4,12 @@ A plant-care tracker built with Expo (SDK 57) and React Native. Log your plants,
 
 ## Features
 
-- Email/password auth with email verification (Supabase Auth)
+- Email/password auth with email verification and a dedicated forgot-password flow (Supabase Auth)
 - Plant data stored in Supabase Postgres (synced across devices on the same account, RLS-scoped per user); plant and growth photos stored in a private Supabase Storage bucket, accessed via time-limited signed URLs
 - Auth session (access/refresh tokens) is AES-encrypted at rest, with the encryption key held in the OS Keychain/Keystore (`expo-secure-store`), instead of being stored as plain text
-- Requires network access — there is no offline/local data store; failures are classified (network-unreachable vs. generic) instead of always showing one blanket error, and the AI chat further distinguishes rate-limit/invalid-key/no-key cases
+- Requires network access — there is no offline/local data store; failures are classified (network-unreachable / rate-limited / permission-denied / not-found / generic) instead of always showing one blanket error, and the AI chat further distinguishes rate-limit/invalid-key/no-key cases
 - Add/edit/delete plants with name, species, watering interval, and cover photo
-- Species auto-suggestion from a plant's photo via the PlantNet identification API (only fills in the species field if it's still empty, never overwrites what you typed)
+- Species auto-suggestion from a plant's photo via the PlantNet identification API (only fills in the species field if it's still empty, never overwrites what you typed); distinguishes image-too-large, rate-limited, and network-error cases instead of failing silently
 - AI plant-care chat (Gemini): a general "Chat" tab for open plant-care questions, plus a per-plant chat scoped to that plant's name/species/watering interval, accessible from a plant's detail screen. History is saved per user (and per plant, for plant-scoped chats) in Supabase
 - English, Spanish, French, and Hindi UI, auto-detected from the device language with a manual override in Settings
 - Per-plant growth photo timeline (take or pick photos over time)
