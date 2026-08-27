@@ -54,3 +54,7 @@ gemini/config.js
 # generated native folders
 /ios
 /android
+
+# local build output (eas build --local)
+*.apk
+*.aab

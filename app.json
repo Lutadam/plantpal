@@ -6,7 +6,7 @@
     "scheme": "plantpal",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.plantpal.app",
@@ -43,7 +43,19 @@
       "expo-background-task",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#121212"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

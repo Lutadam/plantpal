@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -151,6 +152,11 @@ export default function LoginScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <Image
+          source={require("../assets/PlantPal_logo_transparent.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
         >
@@ -326,6 +332,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 24,
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    alignSelf: "center",
+    marginBottom: 12,
   },
   title: {
     textAlign: "center",
