@@ -143,5 +143,21 @@ export const typography = {
   button: {
     fontSize: 16,
     fontWeight: "600",
+    // A Text box that shrink-wraps its content gets its last word clipped
+    // whenever the platform draws glyphs wider than React Native measured them
+    // — which is what Android's "Bold text" accessibility setting does. Giving
+    // the label its container's full width and centring the glyphs inside
+    // leaves the slack needed for any font. Labels that sit inline next to an
+    // icon override this with `inlineLabel` instead.
+    alignSelf: "stretch",
+    textAlign: "center",
   },
+};
+
+// For a label sharing a row with an icon or another label: let it shrink and
+// wrap rather than overflow its container and get clipped.
+export const inlineLabel = {
+  alignSelf: "auto",
+  textAlign: "left",
+  flexShrink: 1,
 };

@@ -15,13 +15,14 @@ import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import BottomNav from "./screens/BottomNav";
 import { ThemeProvider, useTheme } from "./utils/theme";
 import { toAppUser } from "./utils/supabaseUser";
-import { handlePasswordRecoveryUrl } from "./utils/authDeepLink";
+import { handleAuthDeepLink } from "./utils/authDeepLink";
 import {
   hasCompletedOnboarding,
   markOnboardingComplete,
   setCurrentUserId,
 } from "./utils/currentUser";
 import { TABS } from "./utils/tabs";
+import { attachRootBackHandler } from "./utils/backHandler";
 
 function isFullyAuthenticated(session) {
   return !!session?.user?.email_confirmed_at;
@@ -80,8 +81,10 @@ function AppContent() {
 
   useEffect(() => {
     const processUrl = async (url) => {
-      const handled = await handlePasswordRecoveryUrl(url);
-      if (handled) setAwaitingPasswordReset(true);
+      // An email-confirmation link signs the user in, which the auth listener
+      // above already reacts to — only a recovery link needs a screen change.
+      const handled = await handleAuthDeepLink(url);
+      if (handled === "recovery") setAwaitingPasswordReset(true);
     };
     Linking.getInitialURL().then((url) => {
       if (url) processUrl(url);
@@ -115,6 +118,27 @@ function AppContent() {
         ? "onboarding"
         : "home";
 
+  // Any screen with something more specific to do on back (a modal, an open
+  // edit form, a sub-screen) registers its own handler via useBackHandler and
+  // that runs first. This is the last resort: on a non-home tab, back returns
+  // to the home tab instead of exiting; on the home tab (or anywhere without
+  // tabs, e.g. login), back falls through to the OS default.
+  const screenRef = useRef(screen);
+  const activeTabRef = useRef(activeTab);
+  screenRef.current = screen;
+  activeTabRef.current = activeTab;
+
+  useEffect(() => {
+    const subscription = attachRootBackHandler(() => {
+      if (screenRef.current === "home" && activeTabRef.current !== "home") {
+        setActiveTab("home");
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, []);
+
   if (!languageReady) return null;
 
   return (
@@ -122,7 +146,11 @@ function AppContent() {
       {screen === "home" && (
         <View style={{ flex: 1, backgroundColor: theme.background }}>
           <View style={{ flex: 1 }}>
-            <ActiveScreen user={user} onAdded={() => setActiveTab("home")} />
+            <ActiveScreen
+              user={user}
+              onAdded={() => setActiveTab("home")}
+              onCancel={() => setActiveTab("home")}
+            />
           </View>
           <BottomNav active={activeTab} onChange={setActiveTab} />
         </View>

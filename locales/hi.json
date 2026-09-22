@@ -31,8 +31,8 @@
     "switchToLogin": "पहले से खाता है? लॉग इन करें",
     "switchToRegister": "खाता नहीं है? पंजीकरण करें",
     "enterEmailFirstResend": "पहले ऊपर अपना ईमेल दर्ज करें, फिर \"पुष्टिकरण ईमेल फिर से भेजें\" पर टैप करें",
-    "checkEmailVerify": "अपना खाता सत्यापित करने के लिए अपना ईमेल जांचें, फिर लॉग इन करें।",
-    "confirmationSent": "पुष्टिकरण ईमेल भेज दिया गया है। अपना इनबॉक्स जांचें।",
+    "checkEmailVerify": "अपना खाता सत्यापित करने के लिए अपना ईमेल जांचें, फिर लॉग इन करें। यदि यह न मिले, तो अपना स्पैम फ़ोल्डर भी देखें।",
+    "confirmationSent": "पुष्टिकरण ईमेल भेज दिया गया है। अपना इनबॉक्स और स्पैम फ़ोल्डर भी जांचें।",
     "strengthWeak": "कमज़ोर",
     "strengthMedium": "मध्यम",
     "strengthStrong": "मज़बूत",
@@ -42,7 +42,9 @@
     "errorInvalidCredentials": "ईमेल या पासवर्ड गलत है।",
     "errorRateLimited": "बहुत अधिक प्रयास। कृपया बाद में फिर से प्रयास करें।",
     "errorEmailNotConfirmed": "लॉग इन करने से पहले कृपया अपना ईमेल सत्यापित करें।",
-    "errorGeneric": "कुछ गलत हो गया। कृपया फिर से प्रयास करें।"
+    "errorGeneric": "कुछ गलत हो गया। कृपया फिर से प्रयास करें।",
+    "resendConfirmationWait": "{{seconds}} सेकंड में फिर भेज सकते हैं",
+    "errorEmailSendRateLimited": "कृपया दूसरा ईमेल मांगने से पहले एक मिनट प्रतीक्षा करें।"
   },
   "resetPassword": {
     "title": "नया पासवर्ड सेट करें",
@@ -88,7 +90,16 @@
     "notAPlant": "उस फ़ोटो में कोई पौधा नहीं पहचाना जा सका — आप प्रजाति खुद दर्ज कर सकते हैं।",
     "identifyImageTooLarge": "वह फ़ोटो पहचानने के लिए बहुत बड़ी है। कोई छोटी फ़ोटो आज़माएं।",
     "identifyRateLimited": "पौधा पहचान सेवा अभी अपनी उपयोग सीमा तक पहुंच गई है। बाद में फिर से प्रयास करें, या प्रजाति खुद दर्ज करें।",
-    "identifyUnavailable": "अभी पौधे की पहचान नहीं हो सकी। फिर से प्रयास करें, या प्रजाति खुद दर्ज करें।"
+    "identifyUnavailable": "अभी पौधे की पहचान नहीं हो सकी। फिर से प्रयास करें, या प्रजाति खुद दर्ज करें।",
+    "lastWateredLabel": "आपने इसे आखिरी बार कब पानी दिया था?",
+    "lastWateredToday": "आज",
+    "lastWateredEarlier": "कुछ दिन पहले",
+    "lastWateredUnknown": "पता नहीं / अभी तक नहीं",
+    "discardTitle": "बदलाव छोड़ें?",
+    "discardMessage": "आपके पास सहेजे न गए बदलाव हैं। क्या आप उन्हें सहेजना या छोड़ना चाहते हैं?",
+    "discardKeepEditing": "संपादन जारी रखें",
+    "discardDiscard": "छोड़ें",
+    "discardSave": "सहेजें"
   },
   "plantDetail": {
     "editTitle": "पौधा संपादित करें",
@@ -113,6 +124,8 @@
     "reminderDescAvailable": "जब किसी पौधे को वाकई पानी की ज़रूरत हो तो सूचित करें, समय-समय पर बैकग्राउंड में जांचा जाता है",
     "reminderDescUnavailable": "डेवलपमेंट बिल्ड आवश्यक है (Expo Go में समर्थित नहीं)",
     "reminderTime": "रिमाइंडर का समय",
+    "batteryOptimizationHint": "अगर आपके डिवाइस की बैटरी सेवर सेटिंग PlantPal को प्रतिबंधित करती है, तो रिमाइंडर समय पर नहीं आ सकते। बेहतर परिणाम के लिए, बैटरी सेटिंग में PlantPal को बिना किसी प्रतिबंध के चलने दें।",
+    "openBatterySettings": "बैटरी सेटिंग खोलें",
     "snoozeDuration": "स्नूज़ अवधि",
     "daysAbbrev": "{{count}} दिन",
     "sendTestNotification": "टेस्ट सूचना भेजें (5 सेकंड)",
@@ -136,7 +149,18 @@
     "logoutConfirmButton": "लॉग आउट करें",
     "deleteAccountTitle": "मेरा डेटा मिटाएं और लॉग आउट करें",
     "deleteAccountMessage": "इससे आपके द्वारा सहेजे गए सभी पौधे और तस्वीरें (स्थानीय रूप से और क्लाउड में) स्थायी रूप से हटा दी जाती हैं और आपको लॉग आउट कर दिया जाता है। आपका लॉगिन खुद नहीं हटाया जाता — आप बाद में एक खाली खाते में वापस लॉग इन कर सकते हैं।",
-    "deleteAccountConfirmButton": "मिटाएं और लॉग आउट करें"
+    "deleteAccountConfirmButton": "मिटाएं और लॉग आउट करें",
+    "permissions": "अनुमतियाँ",
+    "permissionGranted": "दी गई",
+    "permissionUnavailable": "उपलब्ध नहीं",
+    "permissionAllow": "अनुमति दें",
+    "permissionOpenSettings": "सेटिंग्स खोलें",
+    "camera": "कैमरा",
+    "cameraDescription": "पौधे और प्रगति की तस्वीरें लेने के लिए उपयोग किया जाता है।",
+    "mediaLibrary": "फोटो लाइब्रेरी",
+    "mediaLibraryDescription": "पौधे और प्रगति की तस्वीरें चुनने के लिए उपयोग किया जाता है।",
+    "notifications": "सूचनाएं",
+    "notificationsDescription": "पानी देने की याद के लिए उपयोग किया जाता है।"
   },
   "alerts": {
     "genericTitle": "कुछ गलत हो गया",

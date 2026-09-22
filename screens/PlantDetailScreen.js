@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -32,10 +32,11 @@ import {
   getWateringStatus,
   severityColor,
 } from "../utils/watering";
-import { useTheme, typography } from "../utils/theme";
+import { useTheme, typography, inlineLabel } from "../utils/theme";
 import { confirmDeletePlant } from "../utils/confirmDelete";
 import { showGenericErrorAlert } from "../utils/alerts";
 import { getSnoozeDays } from "../utils/notificationPrefs";
+import { useBackHandler } from "../utils/backHandler";
 import PlantForm from "./PlantForm";
 import ChatScreen from "./ChatScreen";
 
@@ -52,6 +53,21 @@ export default function PlantDetailScreen({
   const [photos, setPhotos] = useState([]);
   const [mode, setMode] = useState("view");
   const [chatOpen, setChatOpen] = useState(false);
+  const formRef = useRef(null);
+
+  // Back while viewing closes chat first, then the detail screen itself.
+  // Back while editing is owned by PlantForm's own handler instead (it mounts
+  // after this one, so it runs first) — it shares the save/discard prompt
+  // with the header's back arrow below.
+  useBackHandler(() => {
+    if (chatOpen) {
+      setChatOpen(false);
+      return true;
+    }
+    if (mode === "edit") return false;
+    onClose?.();
+    return true;
+  });
 
   const loadPhotos = useCallback(async () => {
     try {
@@ -169,7 +185,11 @@ export default function PlantDetailScreen({
     >
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={mode === "edit" ? () => setMode("view") : onClose}
+          onPress={
+            mode === "edit"
+              ? () => formRef.current?.confirmBack()
+              : onClose
+          }
         >
           <Ionicons
             name={mode === "edit" ? "arrow-back" : "close"}
@@ -231,11 +251,13 @@ export default function PlantDetailScreen({
 
       {mode === "edit" ? (
         <PlantForm
+          ref={formRef}
           initialValues={currentPlant}
           existingPhotoDisplayUrl={photoUrlMap[currentPlant.photoUri]}
           submitLabel={t("plantDetail.saveChanges")}
           savingLabel={t("plantDetail.saving")}
           onSubmit={handleEditSubmit}
+          onCancel={() => setMode("view")}
         />
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
@@ -449,6 +471,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   snoozeButtonText: {
+    ...inlineLabel,
     marginLeft: 4,
     fontSize: 14,
   },
@@ -460,6 +483,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   waterButtonText: {
+    ...inlineLabel,
     marginLeft: 6,
   },
   detailText: {

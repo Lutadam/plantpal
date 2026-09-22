@@ -12,7 +12,7 @@ export async function getPlants(userId) {
 
 export async function addPlant(
   userId,
-  { name, species, wateringIntervalDays, photoUri },
+  { name, species, wateringIntervalDays, photoUri, lastWateredAt },
 ) {
   const { data, error } = await supabase
     .from("plants")
@@ -22,6 +22,9 @@ export async function addPlant(
       species: species || null,
       wateringIntervalDays: wateringIntervalDays || 7,
       photoUri: photoUri || null,
+      // Omitted (undefined) when the caller doesn't ask about watering
+      // history at all; null explicitly means "never watered".
+      lastWateredAt: lastWateredAt ?? null,
     })
     .select("id")
     .single();

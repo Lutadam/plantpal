@@ -31,8 +31,8 @@
     "switchToLogin": "Vous avez déjà un compte ? Connectez-vous",
     "switchToRegister": "Pas de compte ? Inscrivez-vous",
     "enterEmailFirstResend": "Saisissez d'abord votre e-mail ci-dessus, puis appuyez sur \"Renvoyer l'e-mail de confirmation\"",
-    "checkEmailVerify": "Vérifiez votre e-mail pour confirmer votre compte, puis connectez-vous.",
-    "confirmationSent": "E-mail de confirmation envoyé. Vérifiez votre boîte de réception.",
+    "checkEmailVerify": "Vérifiez votre e-mail pour confirmer votre compte, puis connectez-vous. Si vous ne le voyez pas, vérifiez votre dossier spam.",
+    "confirmationSent": "E-mail de confirmation envoyé. Vérifiez votre boîte de réception, ainsi que vos spams.",
     "strengthWeak": "Faible",
     "strengthMedium": "Moyen",
     "strengthStrong": "Fort",
@@ -42,7 +42,9 @@
     "errorInvalidCredentials": "E-mail ou mot de passe incorrect.",
     "errorRateLimited": "Trop de tentatives. Veuillez réessayer plus tard.",
     "errorEmailNotConfirmed": "Veuillez vérifier votre e-mail avant de vous connecter.",
-    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer."
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+    "resendConfirmationWait": "Renvoi possible dans {{seconds}} s",
+    "errorEmailSendRateLimited": "Veuillez attendre une minute avant de demander un autre e-mail."
   },
   "resetPassword": {
     "title": "Définir un nouveau mot de passe",
@@ -88,7 +90,16 @@
     "notAPlant": "Impossible de reconnaître une plante sur cette photo — vous pouvez saisir l'espèce vous-même.",
     "identifyImageTooLarge": "Cette photo est trop grande pour être identifiée. Essayez une photo plus petite.",
     "identifyRateLimited": "Le service d'identification des plantes a atteint sa limite d'utilisation pour le moment. Réessayez plus tard, ou saisissez l'espèce vous-même.",
-    "identifyUnavailable": "Impossible d'identifier la plante pour le moment. Réessayez, ou saisissez l'espèce vous-même."
+    "identifyUnavailable": "Impossible d'identifier la plante pour le moment. Réessayez, ou saisissez l'espèce vous-même.",
+    "lastWateredLabel": "Quand l'avez-vous arrosée pour la dernière fois ?",
+    "lastWateredToday": "Aujourd'hui",
+    "lastWateredEarlier": "Il y a quelques jours",
+    "lastWateredUnknown": "Pas sûr / pas encore",
+    "discardTitle": "Abandonner les modifications ?",
+    "discardMessage": "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer ou les abandonner ?",
+    "discardKeepEditing": "Continuer la modification",
+    "discardDiscard": "Abandonner",
+    "discardSave": "Enregistrer"
   },
   "plantDetail": {
     "editTitle": "Modifier la plante",
@@ -113,6 +124,8 @@
     "reminderDescAvailable": "Recevez un avis lorsqu'une plante a réellement besoin d'eau, vérifié périodiquement en arrière-plan",
     "reminderDescUnavailable": "Nécessite une version de développement (non pris en charge par Expo Go)",
     "reminderTime": "Heure du rappel",
+    "batteryOptimizationHint": "Les rappels peuvent ne pas arriver à temps si l'économiseur de batterie de votre appareil restreint PlantPal. Pour de meilleurs résultats, autorisez PlantPal à fonctionner sans restriction dans les paramètres de batterie.",
+    "openBatterySettings": "Ouvrir les paramètres de batterie",
     "snoozeDuration": "Durée de report",
     "daysAbbrev": "{{count}}j",
     "sendTestNotification": "Envoyer une notification test (5s)",
@@ -136,7 +149,18 @@
     "logoutConfirmButton": "Se déconnecter",
     "deleteAccountTitle": "Effacer mes données et me déconnecter",
     "deleteAccountMessage": "Cela supprime définitivement toutes les plantes et photos que vous avez enregistrées (localement et dans le cloud) et vous déconnecte. Votre identifiant de connexion n'est pas supprimé — vous pourrez vous reconnecter ensuite à un compte vide.",
-    "deleteAccountConfirmButton": "Effacer et se déconnecter"
+    "deleteAccountConfirmButton": "Effacer et se déconnecter",
+    "permissions": "Autorisations",
+    "permissionGranted": "Accordée",
+    "permissionUnavailable": "Non disponible",
+    "permissionAllow": "Autoriser",
+    "permissionOpenSettings": "Ouvrir les réglages",
+    "camera": "Appareil photo",
+    "cameraDescription": "Utilisé pour prendre des photos de vos plantes et de leur évolution.",
+    "mediaLibrary": "Photothèque",
+    "mediaLibraryDescription": "Utilisé pour choisir des photos de vos plantes et de leur évolution.",
+    "notifications": "Notifications",
+    "notificationsDescription": "Utilisé pour les rappels d'arrosage."
   },
   "alerts": {
     "genericTitle": "Une erreur s'est produite",

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,7 +15,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
 import { useTheme, typography } from "../utils/theme";
+import { getEmailConfirmRedirectUrl } from "../utils/authDeepLink";
+import { useBackHandler } from "../utils/backHandler";
 import ForgotPasswordScreen from "./ForgotPasswordScreen";
+
+// Supabase allows roughly one confirmation email per address per minute; match
+// it so the user sees a countdown instead of a rate-limit error.
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function getPasswordStrength(password, theme, t) {
   let score = 0;
@@ -43,8 +50,9 @@ function getAuthErrorMessage(error, t) {
     case "invalid_credentials":
       return t("auth.errorInvalidCredentials");
     case "over_request_rate_limit":
-    case "over_email_send_rate_limit":
       return t("auth.errorRateLimited");
+    case "over_email_send_rate_limit":
+      return t("auth.errorEmailSendRateLimited");
     case "email_not_confirmed":
       return t("auth.errorEmailNotConfirmed");
     default:
@@ -65,9 +73,20 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  // Resend is only offered once we know it's relevant — straight after
+  // registering, or once a login attempt has failed on an unconfirmed email.
+  // Showing it to everyone invites mis-taps and lets anyone mail a stranger.
+  const [canResend, setCanResend] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const passwordStrength = getPasswordStrength(password, theme, t);
   const strengthLevel = passwordStrength.level;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleSubmit = async () => {
     setError("");
@@ -89,12 +108,14 @@ export default function LoginScreen() {
         const { error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: { emailRedirectTo: getEmailConfirmRedirectUrl() },
         });
         if (signUpError) throw signUpError;
         await supabase.auth.signOut();
         setPassword("");
         setConfirmPassword("");
         setIsRegistering(false);
+        setCanResend(true);
         setInfo(t("auth.checkEmailVerify"));
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -104,6 +125,7 @@ export default function LoginScreen() {
         if (signInError) throw signInError;
       }
     } catch (err) {
+      if (err?.code === "email_not_confirmed") setCanResend(true);
       setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
@@ -124,15 +146,27 @@ export default function LoginScreen() {
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: email.trim(),
+        options: { emailRedirectTo: getEmailConfirmRedirectUrl() },
       });
       if (resendError) throw resendError;
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
       setInfo(t("auth.confirmationSent"));
     } catch (err) {
+      // A send that was rate-limited still needs the cooldown, otherwise the
+      // user just keeps tapping into the same error.
+      if (err?.code === "over_email_send_rate_limit") {
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      }
       setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
   };
+
+  useBackHandler(() => {
+    setShowForgotPassword(false);
+    return true;
+  }, showForgotPassword);
 
   if (showForgotPassword) {
     return (
@@ -149,8 +183,12 @@ export default function LoginScreen() {
       edges={["top", "bottom"]}
     >
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
         <Image
           source={require("../assets/PlantPal_logo_transparent.png")}
@@ -275,13 +313,36 @@ export default function LoginScreen() {
 
             {!isRegistering ? (
               <View style={styles.forgotRow}>
-                <TouchableOpacity onPress={handleResendConfirmation}>
-                  <Text style={[styles.switchText, { color: theme.primary }]}>
-                    {t("auth.resendConfirmation")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowForgotPassword(true)}>
-                  <Text style={[styles.switchText, { color: theme.primary }]}>
+                {canResend ? (
+                  <TouchableOpacity
+                    style={styles.forgotRowLink}
+                    onPress={handleResendConfirmation}
+                    disabled={loading || resendCooldown > 0}
+                  >
+                    <Text
+                      style={[
+                        styles.linkTextStart,
+                        {
+                          color:
+                            resendCooldown > 0
+                              ? theme.textMuted
+                              : theme.primary,
+                        },
+                      ]}
+                    >
+                      {resendCooldown > 0
+                        ? t("auth.resendConfirmationWait", {
+                            seconds: resendCooldown,
+                          })
+                        : t("auth.resendConfirmation")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.forgotRowLink}
+                  onPress={() => setShowForgotPassword(true)}
+                >
+                  <Text style={[styles.linkTextEnd, { color: theme.primary }]}>
                     {t("auth.forgotPassword")}
                   </Text>
                 </TouchableOpacity>
@@ -316,20 +377,26 @@ export default function LoginScreen() {
                 setIsRegistering((prev) => !prev);
               }}
             >
-              <Text style={[styles.switchText, { color: theme.primary }]}>
+              <Text
+                style={[styles.switchTextCentered, { color: theme.primary }]}
+              >
                 {isRegistering
                   ? t("auth.switchToLogin")
                   : t("auth.switchToRegister")}
               </Text>
             </TouchableOpacity>
+      </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     justifyContent: "center",
     padding: 24,
   },
@@ -394,12 +461,31 @@ const styles = StyleSheet.create({
   },
   forgotRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    columnGap: 12,
     marginTop: -4,
     marginBottom: 8,
   },
-  switchText: {
+  // Each link takes an equal share of the row and aligns its text inside that
+  // share. Letting the label shrink-wrap instead is what clips it: the box ends
+  // up exactly as wide as React Native measured, with no slack for a platform
+  // that draws the glyphs wider (e.g. Android's "Bold text" setting). When only
+  // one link is shown it simply owns the whole row.
+  forgotRowLink: {
+    flex: 1,
+  },
+  linkTextStart: {
     fontSize: 14,
+    textAlign: "left",
+  },
+  linkTextEnd: {
+    fontSize: 14,
+    textAlign: "right",
+  },
+  switchTextCentered: {
+    fontSize: 14,
+    alignSelf: "stretch",
+    textAlign: "center",
   },
   message: {
     marginBottom: 12,

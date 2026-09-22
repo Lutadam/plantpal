@@ -1,11 +1,27 @@
 import i18n from "./i18n";
 
 export const DEFAULT_WATERING_INTERVAL_DAYS = 7;
+export const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function wateringIntervalDays(plant) {
+  return plant.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS;
+}
+
+// The moment this plant next needs water. A snooze wins over the interval, and
+// a plant that has never been watered is due immediately. Used both for the
+// on-screen status and for pre-scheduling reminders with the OS.
+export function getNextWateringDate(plant) {
+  if (plant.snoozedUntil && new Date(plant.snoozedUntil) > new Date()) {
+    return new Date(plant.snoozedUntil);
+  }
+  if (!plant.lastWateredAt) return new Date();
+  return new Date(
+    new Date(plant.lastWateredAt).getTime() +
+      wateringIntervalDays(plant) * DAY_MS,
+  );
+}
 
 export function getWateringStatus(plant) {
-  const intervalDays =
-    plant.wateringIntervalDays || DEFAULT_WATERING_INTERVAL_DAYS;
-
   if (plant.snoozedUntil && new Date(plant.snoozedUntil) > new Date()) {
     const date = new Date(plant.snoozedUntil).toLocaleDateString(undefined, {
       month: "short",
@@ -22,13 +38,8 @@ export function getWateringStatus(plant) {
     return { label: i18n.t("watering.neverWatered"), severity: "danger" };
   }
 
-  const lastWatered = new Date(plant.lastWateredAt);
-  const nextWatering = new Date(
-    lastWatered.getTime() + intervalDays * 24 * 60 * 60 * 1000,
-  );
-  const daysUntil = Math.ceil(
-    (nextWatering - new Date()) / (24 * 60 * 60 * 1000),
-  );
+  const nextWatering = getNextWateringDate(plant);
+  const daysUntil = Math.ceil((nextWatering - new Date()) / DAY_MS);
 
   if (daysUntil <= 0) {
     return {

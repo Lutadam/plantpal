@@ -16,9 +16,16 @@ export async function getPreferredNotifyTime() {
   return { hour, minute };
 }
 
-export async function getPreferredNotifyHour() {
-  const { hour } = await getPreferredNotifyTime();
-  return hour;
+// Mirrors the per-user "enabled" switch in Settings into one global key, so
+// the reminder scheduler can check it without loading a user's settings blob.
+const ENABLED_KEY = storageKey("notificationsEnabled");
+
+export async function getNotificationsEnabled() {
+  return (await AsyncStorage.getItem(ENABLED_KEY)) === "true";
+}
+
+export async function setNotificationsEnabled(enabled) {
+  await AsyncStorage.setItem(ENABLED_KEY, enabled ? "true" : "false");
 }
 
 const SNOOZE_DAYS_KEY = storageKey("snoozeDays");

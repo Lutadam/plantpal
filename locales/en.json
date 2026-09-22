@@ -31,8 +31,8 @@
     "switchToLogin": "Already have an account? Log In",
     "switchToRegister": "Don't have an account? Register",
     "enterEmailFirstResend": "Enter your email above first, then tap \"Resend confirmation email\"",
-    "checkEmailVerify": "Check your email to verify your account, then log in.",
-    "confirmationSent": "Confirmation email sent. Check your inbox.",
+    "checkEmailVerify": "Check your email to verify your account, then log in. If you don't see it, check your spam folder.",
+    "confirmationSent": "Confirmation email sent. Check your inbox, and your spam folder too.",
     "strengthWeak": "Weak",
     "strengthMedium": "Medium",
     "strengthStrong": "Strong",
@@ -42,7 +42,9 @@
     "errorInvalidCredentials": "Incorrect email or password.",
     "errorRateLimited": "Too many attempts. Please try again later.",
     "errorEmailNotConfirmed": "Please verify your email before logging in.",
-    "errorGeneric": "Something went wrong. Please try again."
+    "errorGeneric": "Something went wrong. Please try again.",
+    "resendConfirmationWait": "Resend available in {{seconds}}s",
+    "errorEmailSendRateLimited": "Please wait a minute before asking for another email."
   },
   "resetPassword": {
     "title": "Set a new password",
@@ -88,7 +90,16 @@
     "notAPlant": "Couldn't recognize a plant in that photo — you can still enter the species yourself.",
     "identifyImageTooLarge": "That photo is too large to identify. Try a smaller photo.",
     "identifyRateLimited": "The plant identification service has hit its usage limit for now. Try again later, or enter the species yourself.",
-    "identifyUnavailable": "Couldn't identify the plant right now. Try again, or enter the species yourself."
+    "identifyUnavailable": "Couldn't identify the plant right now. Try again, or enter the species yourself.",
+    "lastWateredLabel": "When did you last water it?",
+    "lastWateredToday": "Today",
+    "lastWateredEarlier": "A few days ago",
+    "lastWateredUnknown": "Not sure / not yet",
+    "discardTitle": "Discard changes?",
+    "discardMessage": "You have unsaved changes. Do you want to save or discard them?",
+    "discardKeepEditing": "Keep Editing",
+    "discardDiscard": "Discard",
+    "discardSave": "Save"
   },
   "plantDetail": {
     "editTitle": "Edit Plant",
@@ -113,6 +124,8 @@
     "reminderDescAvailable": "Get notified when a plant actually needs water, checked periodically in the background",
     "reminderDescUnavailable": "Requires a development build (not supported in Expo Go)",
     "reminderTime": "Reminder time",
+    "batteryOptimizationHint": "Reminders may not arrive on time if your device's battery saver restricts PlantPal. For best results, allow PlantPal to run unrestricted in your battery settings.",
+    "openBatterySettings": "Open battery settings",
     "snoozeDuration": "Snooze duration",
     "daysAbbrev": "{{count}}d",
     "sendTestNotification": "Send test notification (5s)",
@@ -136,7 +149,18 @@
     "logoutConfirmButton": "Log Out",
     "deleteAccountTitle": "Erase my data & sign out",
     "deleteAccountMessage": "This permanently deletes every plant and photo you've stored (locally and in the cloud) and signs you out. Your login itself is not deleted — you can sign back in afterwards to an empty account.",
-    "deleteAccountConfirmButton": "Erase & Sign Out"
+    "deleteAccountConfirmButton": "Erase & Sign Out",
+    "permissions": "Permissions",
+    "permissionGranted": "Granted",
+    "permissionUnavailable": "Not available",
+    "permissionAllow": "Allow",
+    "permissionOpenSettings": "Open Settings",
+    "camera": "Camera",
+    "cameraDescription": "Used to take plant and progress photos.",
+    "mediaLibrary": "Photo Library",
+    "mediaLibraryDescription": "Used to choose plant and progress photos.",
+    "notifications": "Notifications",
+    "notificationsDescription": "Used for watering reminders."
   },
   "alerts": {
     "genericTitle": "Something went wrong",

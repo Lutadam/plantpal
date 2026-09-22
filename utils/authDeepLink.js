@@ -14,16 +14,24 @@ function parseParams(url) {
   return params;
 }
 
-export function getPasswordResetRedirectUrl() {
+function appUrl(path) {
   const scheme = Constants.expoConfig?.scheme || "plantpal";
-  return `${scheme}://reset-password`;
+  return `${scheme}://${path}`;
 }
 
-export async function handlePasswordRecoveryUrl(url) {
-  if (!url) return false;
-  const params = parseParams(url);
-  if (params.type !== "recovery") return false;
+export function getPasswordResetRedirectUrl() {
+  return appUrl("reset-password");
+}
 
+// Without this, Supabase sends the confirmation link to the project's Site URL
+// (localhost by default) instead of back into the app. Both URLs must also be
+// listed under Authentication → URL Configuration → Redirect URLs, or Supabase
+// ignores them and falls back to the Site URL anyway.
+export function getEmailConfirmRedirectUrl() {
+  return appUrl("confirm-email");
+}
+
+async function establishSession(params) {
   if (params.access_token && params.refresh_token) {
     const { error } = await supabase.auth.setSession({
       access_token: params.access_token,
@@ -36,4 +44,17 @@ export async function handlePasswordRecoveryUrl(url) {
     return !error;
   }
   return false;
+}
+
+// Returns "recovery" when the link is a password reset (the caller has to show
+// the new-password screen), "signedIn" when it was an email confirmation that
+// left the user logged in, or null when the URL isn't an auth link at all.
+export async function handleAuthDeepLink(url) {
+  if (!url) return null;
+  const params = parseParams(url);
+  if (!params.type && !params.code) return null;
+
+  const established = await establishSession(params);
+  if (!established) return null;
+  return params.type === "recovery" ? "recovery" : "signedIn";
 }

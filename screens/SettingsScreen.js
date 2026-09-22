@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   Modal,
   Platform,
   ScrollView,
@@ -31,13 +32,14 @@ import {
   sendTestNotification,
 } from "../utils/notifications";
 import {
+  disableWateringReminders,
   registerWateringBackgroundTask,
   runWateringCheckNow,
-  unregisterWateringBackgroundTask,
 } from "../utils/wateringReminderTask";
 import {
   getPreferredNotifyTime,
   setPreferredNotifyTime,
+  setNotificationsEnabled,
   getSnoozeDays,
   setSnoozeDays,
 } from "../utils/notificationPrefs";
@@ -49,6 +51,7 @@ import {
 } from "../utils/alerts";
 import { confirmDestructiveAction } from "../utils/confirmDelete";
 import { storageKey } from "../utils/storageKeys";
+import { PERMISSIONS, openAppSettings } from "../utils/permissions";
 
 function settingsKey(uid) {
   return storageKey(`settings:${uid}`);
@@ -61,9 +64,7 @@ function timeToDate({ hour, minute }) {
 }
 
 function formatTime({ hour, minute }) {
-  const period = hour < 12 ? "AM" : "PM";
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 export default function SettingsScreen({ user }) {
@@ -81,10 +82,52 @@ export default function SettingsScreen({ user }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [snoozeDays, setSnoozeDaysState] = useState(1);
   const [deleting, setDeleting] = useState(false);
+  const [permissionStatuses, setPermissionStatuses] = useState({});
 
   useEffect(() => {
     getSavedLanguagePreference().then(setLanguagePreference);
   }, []);
+
+  const refreshPermissionStatuses = useCallback(async () => {
+    const entries = await Promise.all(
+      PERMISSIONS.map(async (permission) => {
+        if (permission.unavailable) {
+          return [permission.key, { granted: false, unavailable: true }];
+        }
+        const status = await permission.check();
+        return [permission.key, status];
+      }),
+    );
+    setPermissionStatuses(Object.fromEntries(entries));
+  }, []);
+
+  useEffect(() => {
+    refreshPermissionStatuses();
+  }, [refreshPermissionStatuses]);
+
+  // The only way a denied permission changes is the user granting it in the
+  // OS Settings app and coming back — refresh whenever that could have
+  // happened, same pattern DashboardScreen uses for its own data.
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (appStateRef.current === "background" && nextState === "active") {
+        refreshPermissionStatuses();
+      }
+      appStateRef.current = nextState;
+    });
+    return () => subscription.remove();
+  }, [refreshPermissionStatuses]);
+
+  const handlePermissionAction = async (permission) => {
+    const status = permissionStatuses[permission.key];
+    if (status?.canAskAgain === false) {
+      openAppSettings();
+      return;
+    }
+    await permission.request();
+    refreshPermissionStatuses();
+  };
 
   const handleLanguageChange = async (language) => {
     await setAppLanguage(language);
@@ -104,6 +147,9 @@ export default function SettingsScreen({ user }) {
         if (raw) {
           const saved = JSON.parse(raw);
           setEnabled(saved.enabled);
+          // Carry the existing per-user switch into the global key the
+          // scheduler reads, so upgrades don't silently lose reminders.
+          setNotificationsEnabled(!!saved.enabled);
         }
       })
       .catch(() => {});
@@ -133,10 +179,12 @@ export default function SettingsScreen({ user }) {
           showPermissionNeededAlert(t("settings.notificationPermissionReminders"));
           return;
         }
+        await setNotificationsEnabled(true);
         await registerWateringBackgroundTask();
         await runWateringCheckNow();
       } else {
-        await unregisterWateringBackgroundTask();
+        await setNotificationsEnabled(false);
+        await disableWateringReminders();
       }
       setEnabled(value);
       persist({ enabled: value });
@@ -161,7 +209,7 @@ export default function SettingsScreen({ user }) {
     );
   };
 
-  const handleTimeChange = (event, selectedDate) => {
+  const handleTimeChange = async (event, selectedDate) => {
     setPickerOpen(Platform.OS === "ios");
     if (!selectedDate) return;
     const next = {
@@ -169,7 +217,9 @@ export default function SettingsScreen({ user }) {
       minute: selectedDate.getMinutes(),
     };
     setPreferredTimeState(next);
-    setPreferredNotifyTime(next.hour, next.minute);
+    await setPreferredNotifyTime(next.hour, next.minute);
+    // The already-scheduled reminders carry the old time, so re-issue them.
+    if (enabled) await runWateringCheckNow().catch(() => {});
   };
 
   const handleTimeDismiss = () => {
@@ -247,6 +297,96 @@ export default function SettingsScreen({ user }) {
         <View
           style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}
         >
+          <Text
+            style={[
+              typography.label,
+              styles.permissionsTitle,
+              { color: theme.text },
+            ]}
+          >
+            {t("settings.permissions")}
+          </Text>
+          {PERMISSIONS.map((permission, index) => {
+            const status = permissionStatuses[permission.key];
+            const granted = !!status?.granted;
+            const showButton = !permission.unavailable && !granted;
+            return (
+              <View key={permission.key}>
+                {index > 0 ? (
+                  <View
+                    style={[styles.divider, { backgroundColor: theme.border }]}
+                  />
+                ) : null}
+                <View style={styles.permissionRow}>
+                  <View style={styles.rowText}>
+                    <Text style={[typography.label, { color: theme.text }]}>
+                      {t(permission.labelKey)}
+                    </Text>
+                    <Text
+                      style={[
+                        typography.subtext,
+                        styles.rowSubtext,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {t(permission.descriptionKey)}
+                    </Text>
+                  </View>
+                  {permission.unavailable ? (
+                    <Text
+                      style={[
+                        styles.permissionStatus,
+                        { color: theme.textMuted },
+                      ]}
+                    >
+                      {t("settings.permissionUnavailable")}
+                    </Text>
+                  ) : granted ? (
+                    <View style={styles.permissionGranted}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={18}
+                        color={theme.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.permissionStatus,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        {t("settings.permissionGranted")}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                {showButton ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.permissionButton,
+                      { borderColor: theme.primary },
+                    ]}
+                    onPress={() => handlePermissionAction(permission)}
+                  >
+                    <Text
+                      style={[
+                        styles.permissionButtonText,
+                        { color: theme.primary },
+                      ]}
+                    >
+                      {status?.canAskAgain === false
+                        ? t("settings.permissionOpenSettings")
+                        : t("settings.permissionAllow")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+
+        <View
+          style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}
+        >
           <View style={styles.row}>
             <View style={styles.rowText}>
               <Text style={[typography.label, { color: theme.text }]}>
@@ -271,6 +411,37 @@ export default function SettingsScreen({ user }) {
             />
           </View>
 
+          {Platform.OS === "android" && enabled && (
+            <>
+              <View
+                style={[styles.divider, { backgroundColor: theme.border }]}
+              />
+              <View style={styles.row}>
+                <View style={styles.rowText}>
+                  <Text
+                    style={[
+                      typography.subtext,
+                      styles.rowSubtext,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {t("settings.batteryOptimizationHint")}
+                  </Text>
+                  <TouchableOpacity onPress={openAppSettings}>
+                    <Text
+                      style={[
+                        typography.label,
+                        { color: theme.primary, marginTop: 6 },
+                      ]}
+                    >
+                      {t("settings.openBatterySettings")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          )}
+
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
           <TouchableOpacity
@@ -278,13 +449,21 @@ export default function SettingsScreen({ user }) {
             onPress={() => setPickerOpen(true)}
             activeOpacity={0.7}
           >
-            <Text style={[typography.label, { color: theme.text }]}>
+            <Text
+              style={[typography.label, styles.rowLabel, { color: theme.text }]}
+            >
               {t("settings.reminderTime")}
             </Text>
             <View
               style={[styles.timePill, { backgroundColor: theme.surfaceAlt }]}
             >
-              <Text style={[typography.label, { color: theme.primary }]}>
+              <Text
+                style={[
+                  typography.label,
+                  styles.pillText,
+                  { color: theme.primary },
+                ]}
+              >
                 {formatTime(preferredTime)}
               </Text>
             </View>
@@ -293,7 +472,9 @@ export default function SettingsScreen({ user }) {
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
           <View style={styles.timeRow}>
-            <Text style={[typography.label, { color: theme.text }]}>
+            <Text
+              style={[typography.label, styles.rowLabel, { color: theme.text }]}
+            >
               {t("settings.snoozeDuration")}
             </Text>
             <View style={styles.segmentGroup}>
@@ -329,7 +510,7 @@ export default function SettingsScreen({ user }) {
           <DateTimePicker
             value={timeToDate(preferredTime)}
             mode="time"
-            is24Hour={false}
+            is24Hour={true}
             themeVariant={theme.mode}
             onValueChange={handleTimeChange}
             onDismiss={handleTimeDismiss}
@@ -354,7 +535,9 @@ export default function SettingsScreen({ user }) {
           style={[styles.card, theme.shadow, { backgroundColor: theme.card }]}
         >
           <View style={styles.timeRow}>
-            <Text style={[typography.label, { color: theme.text }]}>
+            <Text
+              style={[typography.label, styles.rowLabel, { color: theme.text }]}
+            >
               {t("settings.appearance")}
             </Text>
             <View style={styles.segmentGroup}>
@@ -403,13 +586,21 @@ export default function SettingsScreen({ user }) {
             onPress={() => setLanguagePickerOpen(true)}
             activeOpacity={0.7}
           >
-            <Text style={[typography.label, { color: theme.text }]}>
+            <Text
+              style={[typography.label, styles.rowLabel, { color: theme.text }]}
+            >
               {t("settings.language")}
             </Text>
             <View
               style={[styles.timePill, { backgroundColor: theme.surfaceAlt }]}
             >
-              <Text style={[typography.label, { color: theme.primary }]}>
+              <Text
+                style={[
+                  typography.label,
+                  styles.pillText,
+                  { color: theme.primary },
+                ]}
+              >
                 {languageDisplayLabel}
               </Text>
             </View>
@@ -534,6 +725,36 @@ const styles = StyleSheet.create({
   rowSubtext: {
     marginTop: 2,
   },
+  permissionsTitle: {
+    paddingTop: 16,
+  },
+  permissionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+  },
+  permissionStatus: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  permissionGranted: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  permissionButton: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  permissionButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   divider: {
     height: 1,
   },
@@ -542,6 +763,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 14,
+  },
+  rowLabel: {
+    flex: 1,
+    marginRight: 12,
+  },
+  // A pill sized to its content still clips if the platform draws the glyphs
+  // wider than RN measured, so leave a couple of pixels of slack.
+  pillText: {
+    paddingHorizontal: 2,
   },
   timePill: {
     paddingVertical: 6,
@@ -588,6 +818,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   segmentButtonText: {
+    paddingHorizontal: 2,
     fontSize: 13,
     fontWeight: "600",
   },

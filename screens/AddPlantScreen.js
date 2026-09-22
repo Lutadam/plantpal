@@ -6,7 +6,7 @@ import { uploadPlantPhoto } from "../utils/supabaseStorage";
 import { useTheme, typography } from "../utils/theme";
 import PlantForm from "./PlantForm";
 
-export default function AddPlantScreen({ user, onAdded }) {
+export default function AddPlantScreen({ user, onAdded, onCancel }) {
   const theme = useTheme();
   const { t } = useTranslation();
 
@@ -33,6 +33,7 @@ export default function AddPlantScreen({ user, onAdded }) {
         submitLabel={t("addPlant.submit")}
         savingLabel={t("addPlant.saving")}
         onSubmit={handleSubmit}
+        onCancel={onCancel}
       />
     </SafeAreaView>
   );

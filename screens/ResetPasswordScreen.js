@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "../supabase/config";
 import { useTheme, typography } from "../utils/theme";
 import { getErrorMessage } from "../utils/errorMessages";
+import { useBackHandler } from "../utils/backHandler";
 
 export default function ResetPasswordScreen({ onDone, onCancel }) {
   const theme = useTheme();
@@ -46,14 +48,23 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
     }
   };
 
+  useBackHandler(() => {
+    onCancel?.();
+    return true;
+  });
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: theme.background }}
       edges={["top", "bottom"]}
     >
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
         <Text
           style={[typography.screenTitle, styles.title, { color: theme.text }]}
@@ -111,14 +122,18 @@ export default function ResetPasswordScreen({ onDone, onCancel }) {
             {t("common.cancel")}
           </Text>
         </TouchableOpacity>
+      </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     justifyContent: "center",
     padding: 24,
   },
@@ -145,6 +160,8 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 14,
+    alignSelf: "stretch",
+    textAlign: "center",
   },
   message: {
     marginBottom: 12,

@@ -28,6 +28,7 @@ import {
   deletePlantPhotoFiles,
   useSignedPhotoUrls,
 } from "../utils/supabaseStorage";
+import { syncWateringReminders } from "../utils/wateringReminderTask";
 import PlantDetailScreen from "./PlantDetailScreen";
 
 function filterPlants(plants, query) {
@@ -131,6 +132,10 @@ export default function DashboardScreen({ user }) {
     try {
       const rows = await getPlants(user.uid);
       setPlants(rows);
+      // This runs on open, on app resume, and after every change to a plant, so
+      // it is where the OS-held reminders get kept in step with the data. A
+      // failure here must not block the list from rendering.
+      syncWateringReminders(rows).catch(() => {});
     } catch (err) {
       showGenericErrorAlert(err);
     } finally {
@@ -367,6 +372,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   bannerText: {
+    flex: 1,
     marginLeft: 10,
   },
   emptyState: {
@@ -376,6 +382,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyText: {
+    alignSelf: "stretch",
+    textAlign: "center",
     marginTop: 12,
   },
   emptySubtext: {
